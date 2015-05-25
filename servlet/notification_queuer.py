@@ -11,6 +11,13 @@ sys.path.append('mlibs') # for non-ide usage
 from gmail.message import Message
 from gmail.gmail import GMail
 
+import logging
+logger = logging.getLogger("notification_queuer")
+handler = logging.FileHandler('notification_queuer.log')
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
 from flask import Flask
 app = Flask(__name__)
@@ -29,13 +36,13 @@ def wait_to_mail(to, subject, body, time_to_wait):
     time_to_wait = int(time_to_wait)
     while time_to_wait > 100:
         time_to_wait -= 100
-        print "message:",to,"/",subject,"/",body,"/ still waiting:"
-        print "\t",time_to_wait,"seconds"
+        log("message:",to,"/",subject,"/",body,"/ still waiting:")
+        log("\t",time_to_wait,"seconds")
         time.sleep(100)
     time.sleep(time_to_wait)
     now = datetime.now()
     body += "\n\nToday's date is: "+str(now.month)+"/"+str(now.day)+"/"+str(now.year)+" at "+str(now.hour)+":"+str(now.minute)
-    print "Sending email NOW!",to,subject, body
+    log("Sending email NOW!",to,subject, body)
     send_email(to, subject, body)
 
 def send_email(to, subject, body):
@@ -46,6 +53,12 @@ def send_email(to, subject, body):
     message = Message(subject, to=to, text=body)
     m.send(message)
     m.close()
+
+def log(*args):
+    logstring = ""
+    for arg in args:
+        logstring += " " +str(arg)
+    logger.debug(logstring)
 
 if __name__ == '__main__':
     app.run()
