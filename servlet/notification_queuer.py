@@ -34,11 +34,12 @@ def queue_n(to, subject, body, time):
 
 def wait_to_mail(to, subject, body, time_to_wait):
     time_to_wait = int(time_to_wait)
+    log("New in queue: message:",to,"/",subject,"/",body)
     while time_to_wait > 100:
+        time.sleep(100)
         time_to_wait -= 100
         log("message:",to,"/",subject,"/",body,"/ still waiting:")
         log("\t",time_to_wait,"seconds")
-        time.sleep(100)
     time.sleep(time_to_wait)
     now = datetime.now()
     body += "\n\nToday's date is: "+str(now.month)+"/"+str(now.day)+"/"+str(now.year)+" at "+str(now.hour)+":"+str(now.minute)
