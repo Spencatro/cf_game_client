@@ -85,6 +85,8 @@ class PWClient:
     def __authenticate__( self ):
         print "Starting authentication as:",self.__username
         r,c = self.__make_http_request(self.__root_url+'/login/', body={'email':self.__username, 'password':self.__password, 'sesh':'', 'loginform':'Login'}, request_type='POST')
+        if "Login Failure" in c:
+            raise Exception("Failure to authenticate!")
         self.headers['Cookie'] = r['set-cookie']
         print "Authentication success!"
 
