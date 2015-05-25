@@ -7,6 +7,11 @@ import re
 
 __author__ = 'sxh112430'
 
+DEBUG_LEVEL_MEGA_VERBOSE = 3
+DEBUG_LEVEL_PRETTY_VERBOSE = 2
+DEBUG_LEVEL_SORTA_VERBOSE = 1
+DEBUG_LEVEL_STFU = 0
+
 class Military:
     nukes = 0
     missiles = 0
@@ -55,6 +60,8 @@ class Nation:
     n_id = None
     time_since_active = None
 
+    warrable_list = []
+
 class PWClient:
 
     __last_request_timestamp = 0
@@ -66,7 +73,7 @@ class PWClient:
     alliance_cache = {}
 
     def __init__(self, username, password):
-        self.debug = False
+        self.debug = DEBUG_LEVEL_SORTA_VERBOSE
         self.http = httplib2.Http()
         self.headers = { 'Accept': 'text/html',
                          'user-agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36' }
@@ -90,6 +97,7 @@ class PWClient:
         self.__last_request_timestamp = time.time() * 1000
 
     def __make_http_request( self, url, body = None, request_type = 'GET' ):
+        self._print(2, "Making HTTP request for: ",url)
         self.__query_timecheck()
         r_headers = self.headers
         if(request_type == 'POST' or request_type == 'PUT'):
@@ -103,13 +111,14 @@ class PWClient:
             raise
         return response, content
 
-    def _print( self, *kwargs ):
-        if self.debug:
+    def _print( self, debug_level, *kwargs ):
+        if self.debug >= debug_level:
             for arg in kwargs:
                 print arg,
             print ""
 
     def _retrieve_nationtable(self, url):
+        self._print(1, "Retrieving nationtable for:",url)
         status,content = self.__make_http_request(url)
         parser = ET.XMLParser(recover=True)
         tree = ET.fromstring(content, parser=parser)
@@ -133,7 +142,7 @@ class PWClient:
 
         more_pages = False
         for tr in nationtable.findall(".//tr"):
-            self._print(">tr", len(tr))
+            self._print(3,">tr", len(tr))
             if tr[0].text is not None and re.search('[0-9]+\)', tr[0].text):
                 href = tr[1][0].attrib['href']
                 eq_idx = href.index("=")
@@ -149,29 +158,54 @@ class PWClient:
 
         return full_dict
 
-    def get_dict_of_alliance_members_from_name(self, a_name):
-        # TODO: this
+    def _get_param_from_url(self, url_string, param):
+        # TODO: use this where appropriate
+        param += "="
+        idx = url_string.index(param) + len(param)
+        url_string = url_string[idx:]
+        try:
+            end_idx = url_string.index('&')
+        except:
+            end_idx = len(url_string)
+        return url_string[:end_idx]
 
+    def get_dict_of_alliance_members_from_name(self, a_name):
+        self._print(1, "Getting dict for alliance name:",a_name)
         query_url = self.__root_url + "/index.php?id=15&keyword="+quote_plus(str(a_name))+"&cat=alliance"
         full_dict = self._retrieve_full_query_list(query_url)
-
         return full_dict
 
     def get_list_of_alliance_members_from_ID(self, a_id):
+        print "enter get_list_of_alliance_members_from_ID"
         a_name = self.get_alliance_name_from_ID(a_id)
+        print a_name
         return self.get_dict_of_alliance_members_from_name(a_name)
 
     def get_alliance_name_from_ID(self, a_id):
-        # TODO: this
-        print "ERROR NOT IMPLEMENTED"
-        import sys
-        sys.exit(1)
-        pass
+        self._print(1, "Getting alliance name from id:",a_id)
+        alliance_url = self.__root_url + "/alliance/id="+str(a_id)
 
+        status,content = self.__make_http_request(alliance_url)
+        parser = ET.XMLParser(recover=True)
+        tree = ET.fromstring(content, parser=parser)
+
+        title_obj = tree.find(".//td[@style='text-align:center; font-weight:bold; width:260px;']")
+        title = title_obj.text
+
+        self._print(1, "Alliance name found: ",title)
+        return title
+
+    def get_nation_name_from_id(self, n_id):
+        if n_id in self.nation_cache.keys():
+            return self.nation_cache[n_id]
+        n = self.get_nation_obj_from_ID(n_id)
+        return n.name
 
     def get_nation_obj_from_ID(self, n_id):
         # TODO: put a time check on last pull, in case this script ends up being used in ways that take long periods of time
+        self._print(1, "Getting nation from ID:",n_id)
         if n_id in self.nation_cache.keys():
+            self._print(2, "Cache hit on ",n_id,"! Skipping download")
             return self.nation_cache[n_id]
 
         # Not in cache, go pull data
@@ -182,115 +216,184 @@ class PWClient:
         military = Military()
 
         for tr in nationtable.findall(".//tr"):
-            self._print(">tr", len(tr))
+            self._print(3,">tr", len(tr))
             td_key_text = str(tr[0].text).strip()
             td_key_tag = str(tr[0].tag).strip()
             if td_key_text == "Nation Name:":
                 nation.name = tr[1].text
-                self._print("FOUND: Nation name:",tr[1].text)
+                self._print(3,"FOUND: Nation name:",tr[1].text)
             elif td_key_text == "Leader Name:":
                 nation.leader = tr[1].text
-                self._print("FOUND: Leader name:",tr[1].text)
+                self._print(3,"FOUND: Leader name:",tr[1].text)
             elif td_key_text == "Founded:":
                 nation.founded_date = tr[1].text
-                self._print("FOUND: Founded:",tr[1].text)
+                self._print(3,"FOUND: Founded:",tr[1].text)
             elif td_key_text == "Last Activity:":
                 activity_text = tr[1].text
                 # TODO: transform this into a datetime
                 nation.time_since_active = activity_text
-                self._print("FOUND: Last active:",tr[1].text)
+                self._print(3,"FOUND: Last active:",tr[1].text)
             elif td_key_text == "Unique ID:":
                 uid = tr[1].text
                 nation.uid = tr[1][0].text
-                self._print(tr[1][0].attrib['href'])
-                self._print("FOUND: UID:", tr[1][0].text)
+                self._print(3,tr[1][0].attrib['href'])
+                self._print(3,"FOUND: UID:", tr[1][0].text)
             elif td_key_text == "National Color:":
-                self._print("FOUND COLOR:", tr[1][0][0].text)
+                self._print(3,"FOUND COLOR:", tr[1][0][0].text)
                 nation.color = tr[1][0][0].text
             elif td_key_text == "Alliance:":
-                nation.alliance_name = tr[1][0].text
-                href = str(tr[1][0].attrib['href'])
-                idx = href.index('=')
-                a_id = href[idx+1:len(href)]
-                nation.alliance_id = int(a_id)
-                self._print("Found A_ID:", href, a_id)
+                if len(tr[1]) > 0:
+                    nation.alliance_name = tr[1][0].text
+                    href = str(tr[1][0].attrib['href'])
+                    idx = href.index('=')
+                    a_id = href[idx+1:len(href)]
+                    nation.alliance_id = int(a_id)
+                    self._print(3,"Found A_ID:", href, a_id)
+                else:
+                    self._print(3,"No a_id")
+                    nation.alliance_id = None
             elif td_key_text == "Government Type:":
                 # ....don't ask, something is up with the parser
                 # Edit: Okay it looks like any td with a question mark needs to be indexed weird
                 # Normally it's tr[1], but for '?' td's, it's tr[0][1]. I don't know why.
                 # Parser is probably mad at bad HTML.
-                self._print("Found Govt type:", tr[0][1].text)
+                self._print(3,"Found Govt type:", tr[0][1].text)
                 nation.govt_type = tr[0][1].text
             elif td_key_text == "Population:":
-                self._print("Found pop:",tr[1].text)
+                self._print(3,"Found pop:",tr[1].text)
                 nation.population = int(tr[1].text.replace(',','')) # get rid of commas
             elif td_key_text == "Land Area:":
                 land = tr[0][1].text
                 idx = land.index("sq")-1
                 land = land[:idx]
-                self._print("Found land area:", land)
+                self._print(3,"Found land area:", land)
                 nation.land_area = int(land.replace(',','')) # get rid of commas
             elif td_key_text == "Infrastructure:":
-                self._print("Found infra:",tr[0][1].text)
-                nation.infrastructure = float(tr[0][1].text)
+                self._print(3,"Found infra:",tr[0][1].text)
+                nation.infrastructure = float(tr[0][1].text.replace(',',''))
             elif td_key_text == "Pollution Index:":
                 pollution_string = tr[0][1].text
                 idx = pollution_string.index(" ")
                 pollution = int(pollution_string[:idx])
-                self._print("Found pollution:",pollution)
+                self._print(3,"Found pollution:",pollution)
                 nation.pollution_index = pollution
             elif td_key_text == "Nation Rank:":
                 idx = tr[1].text.index(" of")
                 rank = tr[1].text[1:idx].replace(',','')
                 nation.rank = int(rank)
-                self._print("Found nation rank:", tr[1].text, rank)
+                self._print(3,"Found nation rank:", tr[1].text, rank)
             elif td_key_text == "Nation Score:":
-                self._print("Found nation score:",tr[1].text)
+                self._print(3,"Found nation score:",tr[1].text)
                 score = float(tr[1].text)
                 nation.score = score
 
             elif td_key_text == "Soldiers:":
                 soldiers = tr[1].text.replace(',','')
                 military.soldiers = int(soldiers)
-                self._print("Found soldiers:",military.soldiers)
+                self._print(3,"Found soldiers:",military.soldiers)
 
             elif td_key_text == "Tanks:":
                 tanks = tr[1].text.replace(',','')
                 military.tanks = int(tanks)
-                self._print("Found tanks:",military.tanks)
+                self._print(3,"Found tanks:",military.tanks)
 
             elif td_key_text == "Aircraft:":
                 aircraft = tr[1].text.replace(',','')
                 military.aircraft = int(aircraft)
-                self._print("Found aircraft:",military.aircraft)
+                self._print(3,"Found aircraft:",military.aircraft)
 
             elif td_key_text == "Ships:":
                 ships = tr[1].text.replace(',','')
                 military.ships = int(ships)
-                self._print("Found ships:",military.ships)
+                self._print(3,"Found ships:",military.ships)
 
             elif td_key_text == "Spies:":
                 spies = tr[1].text.replace(',','')
                 military.spies = int(spies)
-                self._print("Found spies:",military.spies)
+                self._print(3,"Found spies:",military.spies)
 
             elif td_key_text == "Missiles:":
                 missiles = tr[1].text.replace(',','')
                 military.missiles = int(missiles)
-                self._print("Found missiles:",military.missiles)
+                self._print(3,"Found missiles:",military.missiles)
 
             elif td_key_text == "Nuclear Weapons:":
                 nukes = tr[1].text.replace(',','')
                 military.nukes = int(nukes)
-                self._print("Found nukes:",military.nukes)
+                self._print(3,"Found nukes:",military.nukes)
 
             # TODO: scrape projects
 
             else:
-                self._print(td_key_tag, td_key_text)
+                self._print(3, "Unknown key:",td_key_tag, td_key_text)
         nation.military = military
         self.nation_cache[n_id] = nation
         return nation
+
+    def check_nation_for_wars(self, nation_id):
+        war_url = self.__root_url + "/nation/id="+str(nation_id)+"&display=war"
+        nationtable = self._retrieve_nationtable(war_url)
+
+        for tr in nationtable.findall(".//tr"):
+            if tr[0].text == "Date":
+                continue # skip empty row
+            date = tr[0].text
+            aggressor_url = tr[1][0].attrib['href']
+            aggressor = self._get_param_from_url(aggressor_url, "id")
+            defender_url = tr[2][0].attrib['href']
+            defender = self._get_param_from_url(defender_url, "id")
+            war_state = tr[3][0].text
+            query_dict = {'aggressor':aggressor, 'defender':defender, 'date':date}
+            war_cursor = self.wars_collection.find(query_dict)
+            if war_cursor.count() == 0:
+                query_dict['war_state'] = war_state
+                # TODO: replace this print with an actual notification
+                print "Notification! Inserting into colleciton: ",query_dict
+                print "Aggressor:", self.get_nation_name_from_id(aggressor)
+                print "Defender:", self.get_nation_name_from_id(defender)
+                self.wars_collection.insert(query_dict)
+                # TODO: insert into db
+            else:
+                db_war_obj = war_cursor.next()
+                db_war_state = db_war_obj['war_state']
+                if db_war_state != war_state:
+                    # TODO: make a notification
+                    print "------------------------"
+                    print "Notification! Old state: ",db_war_obj
+                    print "Aggressor:", self.get_nation_name_from_id(aggressor)
+                    print "Defender:", self.get_nation_name_from_id(defender)
+                    db_war_obj['war_state'] = war_state
+                    print "New state: ",db_war_obj
+
+    def check_alliance_for_wars(self, a_id):
+        alliance_list = self.get_list_of_alliance_members_from_ID(a_id)
+        for n_id in alliance_list:
+            self.check_nation_for_wars(n_id)
+
+    def check_alliance_for_warrable_inactives(self, a_id):
+        print "enter check alliance for warrable"
+        alliance_list = self.get_list_of_alliance_members_from_ID(a_id)
+        print alliance_list
+        nation_scores = [alliance_list[nation_key].score for nation_key in alliance_list]
+        all_warrable_nations = []
+        for nation_key in alliance_list:
+            nation = alliance_list[nation_key]
+            query_url = self.__root_url + "/index.php?id=15&keyword="+str(nation.score)+"&cat=war_range&ob=score&od=ASC&search=Go"
+            query_list = self._retrieve_full_query_list(query_url)
+            for n_key in query_list.keys():
+                other_nation = query_list[n_key]
+                assert isinstance(other_nation, Nation)
+                if not nation.n_id in other_nation.warrable_list:
+                    other_nation.warrable_list.append(nation.n_id)
+                if not other_nation.n_id in all_warrable_nations:
+                    all_warrable_nations.append(other_nation.n_id)
+        for n_id in all_warrable_nations:
+            n_obj = self.get_nation_obj_from_ID(n_id)
+            print "Warrable nation: ",n_id, n_obj.name, n_obj.score, n_obj.color
+            print " Can be attacked by:"
+            for potential_attacker_id in n_obj.warrable_list:
+                potential_attacker = self.get_nation_obj_from_ID(potential_attacker_id)
+                print " - ",potential_attacker_id, potential_attacker.name, potential_attacker.score
 
 if __name__ == "__main__":
 
@@ -298,6 +401,14 @@ if __name__ == "__main__":
     PASS = os.environ['PWPASS']
     pwc = PWClient(USERNAME, PASS)
 
+    na_id = 17270
+
+    pwc.check_alliance_for_warrable_inactives(1356)
+
+    # pwc.check_nation_for_wars(na_id)
+
+
+    '''
     print "enter alliance name to search for:"
     alliance_search = raw_input()
 
@@ -328,4 +439,5 @@ if __name__ == "__main__":
 
     print "Nation with current highest military score:",max_mil_nation.name,max_mil_nation.military.get_score()
     print "Nation with current lowest military score:",min_mil_nation.name, min_mil_nation.military.get_score()
+    '''
 
