@@ -1,4 +1,6 @@
-from urllib import urlencode, quote_plus
+from urllib import urlencode, quote_plus, quote
+import datetime
+from datetime import timedelta
 import httplib2
 import os
 import time
@@ -11,6 +13,65 @@ DEBUG_LEVEL_MEGA_VERBOSE = 3
 DEBUG_LEVEL_PRETTY_VERBOSE = 2
 DEBUG_LEVEL_SORTA_VERBOSE = 1
 DEBUG_LEVEL_STFU = 0
+
+BEIGE_CREATION_TIMEDELTA = timedelta(days=14, hours=2)
+BEIGE_WAR_TIMEDELTA = timedelta(days=5, hours=2)
+
+def stringify_children(node):
+    from lxml.etree import tostring
+    from itertools import chain
+    parts = ([node.text] +
+            list(chain(*([c.text, tostring(c), c.tail] for c in node.getchildren()))) +
+            [node.tail])
+    # filter removes possible Nones in texts and tails
+    return ''.join(filter(None, parts))
+
+class NationDoesNotExistError(Exception): pass
+class WhyIsNationInBeige(Exception): pass
+
+class War:
+    def __init__(self, war_id, aggressor_id, defender_id,date_started,date_ended = None, winner_id = None, last_nuclear_strike_against = {}):
+        self.war_id = war_id
+        self.aggressor = aggressor_id
+        self.defender = defender_id
+        self.in_progress = False
+        self.date_started = date_started
+        self.date_ended = date_ended
+        self.winner_id = winner_id
+        self.last_nuclear_strike_against = last_nuclear_strike_against
+
+        if winner_id is None:
+            self.in_progress = True
+
+    def set_winner(self, winner_id, date_ended):
+        self.in_progress = False
+        self.winner_id = winner_id
+        self.date_ended = date_ended
+
+    def can_contribute_to_beige(self, current_date):
+        if self.in_progress:
+            return False
+        if self.date_ended is None:
+            return False
+        assert isinstance(current_date, datetime)
+        time_difference = current_date - self.date_ended
+        seconds = time_difference.total_seconds()
+        if seconds < timedelta(days=14).total_seconds():
+            return True
+        return False
+
+    def __str__(self):
+        representation = "<War: "+str(self.war_id) + ", winner:"
+        if self.in_progress:
+            representation += " inconclusive"
+        else:
+            representation += str(self.winner_id)
+        representation += ", nuclear war: "+str(len(self.last_nuclear_strike_against.keys()) > 0)+">"
+        return str(representation)
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class Military:
     nukes = 0
@@ -59,6 +120,7 @@ class Nation:
     name = None
     n_id = None
     time_since_active = None
+    precisely_founded = False
 
     warrable_list = []
 
@@ -73,29 +135,37 @@ class PWClient:
     alliance_cache = {}
 
     def __init__(self, username, password):
-        self.debug = DEBUG_LEVEL_SORTA_VERBOSE
+        self.debug = DEBUG_LEVEL_STFU
         self.http = httplib2.Http()
         self.headers = { 'Accept': 'text/html',
                          'user-agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36' }
         self.__username = username
         self.__password = password
+        self.__using_db = False
 
         self.__authenticate__()
 
     def __authenticate__( self ):
-        print "Starting authentication as:",self.__username
+        self._print(1, "Starting authentication as:",self.__username)
         r,c = self.__make_http_request(self.__root_url+'/login/', body={'email':self.__username, 'password':self.__password, 'sesh':'', 'loginform':'Login'}, request_type='POST')
         if "Login Failure" in c:
             raise Exception("Failure to authenticate!")
+        if not 'set-cookie' in r:
+            self._print(1, "Already authed?")
+            return
         self.headers['Cookie'] = r['set-cookie']
-        print "Authentication success!"
+        self._print(1, "Authentication success!")
 
     def __query_timecheck(self):
         current_timestamp = int(round(time.time() * 1000))
         time_difference = current_timestamp - self.__last_request_timestamp
-        if time_difference < 100:
-            # wait 100 ms between queries, so as not to be banned I guess??
-            time.sleep(time_difference / 1000)
+        if time_difference < 10:
+            # wait 10 ms between queries, so as not to be banned I guess??
+            ratio = time_difference / 1000
+            if ratio < 0:
+                ratio = 0
+                print "WTF HAPPENED"
+            time.sleep(ratio)
         self.__last_request_timestamp = time.time() * 1000
 
     def __make_http_request( self, url, body = None, request_type = 'GET' ):
@@ -119,28 +189,36 @@ class PWClient:
                 print arg,
             print ""
 
-    def _retrieve_nationtable(self, url):
-        self._print(1, "Retrieving nationtable for:",url)
-        status,content = self.__make_http_request(url)
+    def _retrieve_leftcolumn(self):
+        self._print("Retrieving leftcolumn")
+        status,content = self.__make_http_request(self.__root_url)
         parser = ET.XMLParser(recover=True)
         tree = ET.fromstring(content, parser=parser)
-        nationtable = tree.find(".//table[@class='nationtable']")
-        return nationtable
+        leftcolumn = tree.find(".//div[@id='leftcolumn']")
+        return leftcolumn
+
+    def _retrieve_nationtable(self, url, idx=0):
+        self._print(1, "Retrieving nationtable for:",url)
+        status,content = self.__make_http_request(url)
+        if "That nation does not exist." in content:
+            raise NationDoesNotExistError(url)
+        parser = ET.XMLParser(recover=True)
+        tree = ET.fromstring(content, parser=parser)
+        nationtables = tree.findall(".//table[@class='nationtable']")
+        return nationtables[idx]
 
     # TODO: get alliance info
     # TODO: get list of nation ID's from alliance ID
     # TODO: get list of nations who can declare against particular nation ID
     # TODO: consider downloading all ~3000 nations first, then parsing all the data after?
 
-    def _retrieve_full_query_list(self, url, minimum=0, maximum=50):
+    def _generate_full_query_list(self, url, minimum=0, maximum=50):
         # Note: DO NOT INCLUDE &maximum=n&minimum=m in this url! They will be calculated and added in here!
         min_max_url = url
         # only modify this url, will need original unused url for later
         min_max_url += "&ob=score&maximum="+str(maximum)+"&minimum="+str(minimum)+"&search=Go"
 
         nationtable = self._retrieve_nationtable(min_max_url)
-
-        full_dict = {}
 
         more_pages = False
         for tr in nationtable.findall(".//tr"):
@@ -150,15 +228,12 @@ class PWClient:
                 eq_idx = href.index("=")
                 n_id = int(href[eq_idx+1:])
                 nation_idx = int(tr[0].text.replace(')','').replace(',',''))
-                full_dict[nation_idx] = self.get_nation_obj_from_ID(n_id)
+                yield self.get_nation_obj_from_ID(n_id)
                 more_pages = True
 
         if more_pages:
-            append_to_list = self._retrieve_full_query_list(url, minimum=minimum+maximum)
-            for key in append_to_list.keys():
-                full_dict[key] = append_to_list[key]
-
-        return full_dict
+            for nation in self._generate_full_query_list(url, minimum=minimum+maximum):
+                yield nation
 
     def _get_param_from_url(self, url_string, param):
         # TODO: use this where appropriate
@@ -169,22 +244,36 @@ class PWClient:
             end_idx = url_string.index('&')
         except:
             end_idx = len(url_string)
-        return url_string[:end_idx]
+        return url_string[:end_idx].strip()
+
+    def set_db(self, db):
+        # TOOD: this
+        # self.__using_db = True
+        raise Exception("Unimplemented, sry")
+        pass
 
     def get_dict_of_alliance_members_from_name(self, a_name):
-        self._print(1, "Getting dict for alliance name:",a_name)
+        self._print(2, "Getting dict for alliance name:",a_name)
         query_url = self.__root_url + "/index.php?id=15&keyword="+quote_plus(str(a_name))+"&cat=alliance"
-        full_dict = self._retrieve_full_query_list(query_url)
+        full_dict = {}
+        for nation in self._generate_full_query_list(query_url):
+            assert isinstance(nation, Nation)
+            n = Nation
+            full_dict[nation.n_id] = nation
         return full_dict
 
+    def generate_all_nations_with_color(self, color):
+        query_url = self.__root_url + "/index.php?id=15&keyword="+color+"&cat=color"
+        for nation in self._generate_full_query_list(query_url):
+            yield nation
+
+
     def get_list_of_alliance_members_from_ID(self, a_id):
-        print "enter get_list_of_alliance_members_from_ID"
         a_name = self.get_alliance_name_from_ID(a_id)
-        print a_name
         return self.get_dict_of_alliance_members_from_name(a_name)
 
     def get_alliance_name_from_ID(self, a_id):
-        self._print(1, "Getting alliance name from id:",a_id)
+        self._print(2, "Getting alliance name from id:",a_id)
         alliance_url = self.__root_url + "/alliance/id="+str(a_id)
 
         status,content = self.__make_http_request(alliance_url)
@@ -194,21 +283,39 @@ class PWClient:
         title_obj = tree.find(".//td[@style='text-align:center; font-weight:bold; width:260px;']")
         title = title_obj.text
 
-        self._print(1, "Alliance name found: ",title)
+        self._print(2, "Alliance name found: ",title)
         return title
 
     def get_nation_name_from_id(self, n_id):
         if n_id in self.nation_cache.keys():
-            return self.nation_cache[n_id]
+            return self.nation_cache[n_id].name
         n = self.get_nation_obj_from_ID(n_id)
         return n.name
 
-    def get_nation_obj_from_ID(self, n_id):
+    def get_next_turn_in_datetime(self, reftime=None):
+        if reftime is None:
+            leftcol = self._retrieve_leftcolumn()
+            datestring = str(leftcol[4][1].tail).strip()
+            now_year = datetime.datetime.now().year
+            reftime = datetime.datetime.strptime(datestring+" "+str(now_year), "%B %d %I:%M %p %Y")
+        if reftime.hour % 2 == 0:
+            reftime += timedelta(hours=1, minutes=60-reftime.minute)
+        return reftime
+
+    def get_current_date_in_datetime(self):
+        leftcol = self._retrieve_leftcolumn()
+        datestring = str(leftcol[4][1].tail).strip()
+        now_year = datetime.datetime.now().year
+        dt = datetime.datetime.strptime(datestring+" "+str(now_year), "%B %d %I:%M %p %Y")
+        return dt
+
+    def get_nation_obj_from_ID(self, n_id, skip_cache = False):
         # TODO: put a time check on last pull, in case this script ends up being used in ways that take long periods of time
-        self._print(1, "Getting nation from ID:",n_id)
-        if n_id in self.nation_cache.keys():
-            self._print(2, "Cache hit on ",n_id,"! Skipping download")
-            return self.nation_cache[n_id]
+        self._print(2, "Getting nation from ID:",n_id)
+        if not skip_cache: # Sometimes may want to force-skip cache
+            if n_id in self.nation_cache.keys():
+                self._print(2, "Cache hit on ",n_id,"! Skipping download")
+                return self.nation_cache[n_id]
 
         # Not in cache, go pull data
         url = self.__root_url + "/nation/id="+str(n_id)
@@ -216,6 +323,8 @@ class PWClient:
 
         nation = Nation()
         military = Military()
+
+        nation.n_id = n_id
 
         for tr in nationtable.findall(".//tr"):
             self._print(3,">tr", len(tr))
@@ -228,8 +337,10 @@ class PWClient:
                 nation.leader = tr[1].text
                 self._print(3,"FOUND: Leader name:",tr[1].text)
             elif td_key_text == "Founded:":
-                nation.founded_date = tr[1].text
-                self._print(3,"FOUND: Founded:",tr[1].text)
+                date_string = tr[1].text.split(" ")[0]
+                date_obj = datetime.datetime.strptime(date_string, "%m/%d/%Y")
+                nation.founded_date = date_obj
+                self._print(3,"FOUND: Founded:",date_obj)
             elif td_key_text == "Last Activity:":
                 activity_text = tr[1].text
                 # TODO: transform this into a datetime
@@ -242,7 +353,7 @@ class PWClient:
                 self._print(3,"FOUND: UID:", tr[1][0].text)
             elif td_key_text == "National Color:":
                 self._print(3,"FOUND COLOR:", tr[1][0][0].text)
-                nation.color = tr[1][0][0].text
+                nation.color = tr[1][0][0].text.strip()
             elif td_key_text == "Alliance:":
                 if len(tr[1]) > 0:
                     nation.alliance_name = tr[1][0].text
@@ -260,23 +371,25 @@ class PWClient:
                 # Normally it's tr[1], but for '?' td's, it's tr[0][1]. I don't know why.
                 # Parser is probably mad at bad HTML.
                 self._print(3,"Found Govt type:", tr[0][1].text)
-                nation.govt_type = tr[0][1].text
+                nation.govt_type = str(tr[0][1].text).strip()
             elif td_key_text == "Population:":
-                self._print(3,"Found pop:",tr[1].text)
-                nation.population = int(tr[1].text.replace(',','')) # get rid of commas
+                population = str(tr[1].text.replace(',','')).strip()
+                self._print(3,"Found pop:",population)
+                nation.population = int(population) # get rid of commas
             elif td_key_text == "Land Area:":
-                land = tr[0][1].text
+                land = str(tr[0][1].text.replace(',','')).strip()
                 idx = land.index("sq")-1
                 land = land[:idx]
                 self._print(3,"Found land area:", land)
-                nation.land_area = int(land.replace(',','')) # get rid of commas
+                nation.land_area = int(land) # get rid of commas
             elif td_key_text == "Infrastructure:":
-                self._print(3,"Found infra:",tr[0][1].text)
-                nation.infrastructure = float(tr[0][1].text.replace(',',''))
+                inf = float(tr[0][1].text.replace(',',''))
+                self._print(3,"Found infra:",inf)
+                nation.infrastructure = inf
             elif td_key_text == "Pollution Index:":
-                pollution_string = tr[0][1].text
+                pollution_string = str(tr[0][1].text).strip()
                 idx = pollution_string.index(" ")
-                pollution = int(pollution_string[:idx])
+                pollution = int(pollution_string[:idx].replace(',',''))
                 self._print(3,"Found pollution:",pollution)
                 nation.pollution_index = pollution
             elif td_key_text == "Nation Rank:":
@@ -286,7 +399,7 @@ class PWClient:
                 self._print(3,"Found nation rank:", tr[1].text, rank)
             elif td_key_text == "Nation Score:":
                 self._print(3,"Found nation score:",tr[1].text)
-                score = float(tr[1].text)
+                score = float(tr[1].text.replace(",",""))
                 nation.score = score
 
             elif td_key_text == "Soldiers:":
@@ -325,14 +438,32 @@ class PWClient:
                 self._print(3,"Found nukes:",military.nukes)
 
             # TODO: scrape projects
-
             else:
-                self._print(3, "Unknown key:",td_key_tag, td_key_text)
+                found_something = False
+                try:
+                    for obj in tr[0][0]:
+                        if "was created!" in obj.tail:
+                            now_year = datetime.datetime.now().year
+                            creation_string = tr[0][0].text[:-3]+" "+str(now_year)
+                            format_string = "%m/%d %I:%M %p %Y"
+                            created_obj = datetime.datetime.strptime(creation_string, format_string)
+                            found_something = True
+                            nation.founded_date = created_obj
+                            nation.precisely_founded = True
+                            self._print(3, "Found more precise founded date:",created_obj)
+                except:
+                    pass
+                finally:
+                    if not found_something:
+                        self._print(3, "Unknown key:",td_key_tag, td_key_text)
         nation.military = military
         self.nation_cache[n_id] = nation
         return nation
 
     def check_nation_for_wars(self, nation_id):
+        if not self.__using_db:
+            raise Exception("Can't do this because not using a database")
+
         war_url = self.__root_url + "/nation/id="+str(nation_id)+"&display=war"
         nationtable = self._retrieve_nationtable(war_url)
 
@@ -373,17 +504,13 @@ class PWClient:
             self.check_nation_for_wars(n_id)
 
     def check_alliance_for_warrable_inactives(self, a_id):
-        print "enter check alliance for warrable"
         alliance_list = self.get_list_of_alliance_members_from_ID(a_id)
-        print alliance_list
         nation_scores = [alliance_list[nation_key].score for nation_key in alliance_list]
         all_warrable_nations = []
         for nation_key in alliance_list:
             nation = alliance_list[nation_key]
             query_url = self.__root_url + "/index.php?id=15&keyword="+str(nation.score)+"&cat=war_range&ob=score&od=ASC&search=Go"
-            query_list = self._retrieve_full_query_list(query_url)
-            for n_key in query_list.keys():
-                other_nation = query_list[n_key]
+            for other_nation in self._generate_full_query_list(query_url):
                 assert isinstance(other_nation, Nation)
                 if not nation.n_id in other_nation.warrable_list:
                     other_nation.warrable_list.append(nation.n_id)
@@ -391,11 +518,108 @@ class PWClient:
                     all_warrable_nations.append(other_nation.n_id)
         for n_id in all_warrable_nations:
             n_obj = self.get_nation_obj_from_ID(n_id)
-            print "Warrable nation: ",n_id, n_obj.name, n_obj.score, n_obj.color
-            print " Can be attacked by:"
-            for potential_attacker_id in n_obj.warrable_list:
-                potential_attacker = self.get_nation_obj_from_ID(potential_attacker_id)
-                print " - ",potential_attacker_id, potential_attacker.name, potential_attacker.score
+
+    def queue_new_notification(self, to, subject, body, seconds_until_notification):
+        url = "http://radiofreaq.spencer-hawkins.com:5000/queue_n/"+quote(to)+"/"+quote(subject)+"/"+quote(body)+"/"+quote(str(seconds_until_notification))+"/"
+        self._print(2, "Making new notification req: ", url)
+        self._print(3, self.__make_http_request(url))
+
+    def calculate_beige_exit_time(self, n_id):
+        nation = self.get_nation_obj_from_ID(n_id)
+        if nation.color != "Beige":
+            raise Exception("Error: nation is not in beige!")
+        recent_wars = self.get_most_recent_wars(n_id)
+        last_lost_date = None
+        for lost_war in [r_war for r_war in recent_wars if not r_war.in_progress and str(r_war.winner_id) != str(n_id) or str(n_id) in r_war.last_nuclear_strike_against.keys()]:
+            assert isinstance(lost_war, War)
+            if not lost_war.in_progress and lost_war.winner_id != str(n_id):
+                if last_lost_date is None or last_lost_date < lost_war.date_ended:
+                    last_lost_date = lost_war.date_ended
+            if len(lost_war.last_nuclear_strike_against) > 0:
+                if str(n_id) in lost_war.last_nuclear_strike_against.keys():
+                    nuke_time = lost_war.last_nuclear_strike_against[str(n_id)]
+                    if last_lost_date is None or last_lost_date < nuke_time:
+                        last_lost_date = nuke_time
+        if last_lost_date is not None and self.get_next_turn_in_datetime() - self.get_next_turn_in_datetime(last_lost_date) <= BEIGE_WAR_TIMEDELTA:
+            return last_lost_date + BEIGE_WAR_TIMEDELTA
+        # wasn't a war that kicked into beige, must be creation date
+        if self.get_next_turn_in_datetime() - self.get_next_turn_in_datetime(nation.founded_date) <= BEIGE_CREATION_TIMEDELTA:
+            return nation.founded_date + BEIGE_CREATION_TIMEDELTA
+        raise WhyIsNationInBeige("ERROR: Nation "+str(n_id)+" shouldn't be in beige...??!?!?")
+
+    def get_war_obj_from_id(self, war_id):
+        # idx = 1 because on war screens there are actually 3 separate nationtables. We want the second, 0 indexed -> 1
+        nationtable = self._retrieve_nationtable(self.__root_url+"/nation/war/timeline/war="+war_id,1)
+        tr_list = nationtable.findall(".//tr")
+        last_idx = len(tr_list) - 1
+
+        first_fight = tr_list[0][0][0].text
+        last_fight = tr_list[last_idx][0][0].text
+
+        date_format = "%m/%d/%Y %I:%M %p"
+
+        aggressor_id = self._get_param_from_url(tr_list[0][1][0][0].attrib['href'], "id")
+        defender_id = self._get_param_from_url(tr_list[0][1][0][1].attrib['href'],"id")
+
+        last_nuclear_strike_against = {} # key is target ID
+
+        # TODO: find any battles that used a nuke
+        for battle_idx in range(len(tr_list)):
+            battle = tr_list[battle_idx]
+            battle_description = stringify_children(battle[1][0])
+            nuke = "nuclear weapon" in battle_description
+
+
+            if nuke:
+                nuke_time_string = battle[0][0].text
+                nuke_time = datetime.datetime.strptime(nuke_time_string, date_format)
+                nuke_launcher = self._get_param_from_url(battle[1][0][0].attrib['href'], "id")
+                nuke_target = self._get_param_from_url(battle[1][0][1].attrib['href'], "id")
+                # print "LAUNCHED BY ~~~~~~",nuke_launcher, "TARGETING",nuke_target, "AT",nuke_time
+                if nuke_target not in last_nuclear_strike_against or last_nuclear_strike_against[nuke_target] < nuke_time:
+                    last_nuclear_strike_against[nuke_target] = nuke_time
+
+        last_fight_description = tr_list[last_idx][1][0][0].tail
+
+        start_date = datetime.datetime.strptime(first_fight.strip(), date_format)
+        end_date = datetime.datetime.strptime(last_fight.strip(), date_format)
+
+        w = War(war_id, aggressor_id,defender_id,start_date,last_nuclear_strike_against=last_nuclear_strike_against)
+
+        war_ended = False
+        if "resulting in the immediate surrender" in last_fight_description:
+            winner_id = self._get_param_from_url(tr_list[last_idx][1][0][0].attrib['href'], "id")
+            war_ended = True
+            w.set_winner(winner_id, end_date)
+
+        return w
+
+    def get_most_recent_wars(self, nation_id, defensive_only = False, offensive_only = False):
+        if defensive_only and offensive_only:
+            defensive_only = offensive_only = False # you're a doof why did you do "only both" sheesh
+
+        war_url = self.__root_url + "/nation/id="+str(nation_id)+"&display=war"
+        nationtable = self._retrieve_nationtable(war_url)
+
+        war_list = []
+        for tr in nationtable.findall(".//tr"):
+            if "No wars to display" in stringify_children(tr): # empty warlist, just return
+                return war_list
+            if tr[0].text == "Date":
+                continue # skip empty row
+            if defensive_only and self._get_param_from_url(tr[1][0].attrib['href'], "id") == str(nation_id):
+                continue # Skip offensive wars
+            if offensive_only and self._get_param_from_url(tr[2][0].attrib['href'], "id") == str(nation_id):
+                continue # skip defensive wars
+            if len(war_list) > 5:
+                return war_list
+
+            a_tag = tr[3].find(".//a")
+            war_id = a_tag.attrib['href']
+            war_id = self._get_param_from_url(war_id, "war")
+            war_list.append(self.get_war_obj_from_id(war_id))
+        return war_list
+
 
 if __name__ == "__main__":
 
@@ -403,9 +627,57 @@ if __name__ == "__main__":
     PASS = os.environ['PWPASS']
     pwc = PWClient(USERNAME, PASS)
 
-    na_id = 17270
+    count = 0
+    beiges_to_expire = []
+    for beige in pwc.generate_all_nations_with_color('beige'):
+        try:
+            if pwc.calculate_beige_exit_time(beige.n_id) - pwc.get_current_date_in_datetime() < timedelta(hours=1):
+                count += 1
+                beiges_to_expire.append(beige.n_id)
+                print ""
+                print beige.n_id, beige.color, "to expire in less than one hour"
+                print ""
+            else :
+                print ".",
+            if count > 5:
+                break
+        except WhyIsNationInBeige:
+            print "\nshit this nation is in beige, why??",beige.n_id
+        except NationDoesNotExistError:
+            print "\nshit this nation doesn't exist wat", beige.n_id
 
-    pwc.check_alliance_for_warrable_inactives(1356)
+    print "reached the end of the list"
+    time.sleep(60 * 60)
+
+    for bte in beiges_to_expire:
+        nation = pwc.get_nation_obj_from_ID(bte,skip_cache=True)
+        print "Did nation expire?", nation.n_id, nation.color
+    raw_input("WAITING ...")
+
+    na_id = 18672
+
+    pwc.get_current_date_in_datetime()
+    pwc.get_nation_obj_from_ID(na_id)
+
+    now = pwc.get_current_date_in_datetime()
+    print pwc.calculate_beige_exit_time(1979) - now
+
+    raw_input("WAITING")
+
+    ids = [
+        996,3766,94,4834,202,1979,228,529,3805
+    ]
+    for n in ids:
+        print n, pwc.calculate_beige_exit_time(n) - now
+
+    war_list = pwc.get_most_recent_wars(na_id)
+
+    print len(war_list)
+
+    # pwc.calculate_beige_exit_time(na_id)
+    # pwc.check_alliance_for_warrable_inactives(1356)
+
+    # pwc.queue_new_notification("hawkins.spencer@gmail.com", "howdy from the pnw client!","what up??",20)
 
     # pwc.check_nation_for_wars(na_id)
 
