@@ -6,6 +6,8 @@ import os
 import time
 import lxml.etree as ET
 import re
+import logging
+import sys
 
 __author__ = 'sxh112430'
 
@@ -134,7 +136,7 @@ class PWClient:
     nation_cache = {}
     alliance_cache = {}
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, logger=None):
         self.debug = DEBUG_LEVEL_STFU
         self.http = httplib2.Http()
         self.headers = { 'Accept': 'text/html',
@@ -144,6 +146,12 @@ class PWClient:
         self.__using_db = False
 
         self.__authenticate__()
+        if logger is None:
+            logger = logging.getLogger("PWClient")
+            hndl = logging.StreamHandler(sys.stdout)
+            logger.addHandler(hndl)
+            logger.setLevel(logging.INFO)
+        self.logger = logger
 
     def __authenticate__( self ):
         self._print(1, "Starting authentication as:",self.__username)
@@ -185,9 +193,12 @@ class PWClient:
 
     def _print( self, debug_level, *kwargs ):
         if self.debug >= debug_level:
+            logstring = ""
             for arg in kwargs:
                 print arg,
+                logstring += str(arg)+" "
             print ""
+            self.logger.info(logstring)
 
     def _retrieve_leftcolumn(self):
         self._print("Retrieving leftcolumn")
@@ -623,9 +634,14 @@ class PWClient:
 
 if __name__ == "__main__":
 
+    logger = logging.getLogger("pwc")
+    fhandler1 = logging.FileHandler("pwc.out", mode='w')
+    logger.addHandler(fhandler1)
+    logger.setLevel(logging.INFO)
+
     USERNAME = os.environ['PWUSER']
     PASS = os.environ['PWPASS']
-    pwc = PWClient(USERNAME, PASS)
+    pwc = PWClient(USERNAME, PASS, logger=logger)
 
     count = 0
     beiges_to_expire = []
@@ -634,45 +650,45 @@ if __name__ == "__main__":
             if pwc.calculate_beige_exit_time(beige.n_id) - pwc.get_current_date_in_datetime() < timedelta(hours=1):
                 count += 1
                 beiges_to_expire.append(beige.n_id)
-                print ""
-                print beige.n_id, beige.color, "to expire in less than one hour"
-                print ""
+                logger.info("")
+                logger.info(str(beige.n_id) + " "+ str(beige.color) + " to expire in less than one hour")
+                logger.info("")
             else :
                 print ".",
             if count > 5:
                 break
         except WhyIsNationInBeige:
-            print "\nshit this nation is in beige, why??",beige.n_id
+            logger.info("\nshit this nation is in beige, why?? " + str(beige.n_id))
         except NationDoesNotExistError:
-            print "\nshit this nation doesn't exist wat", beige.n_id
+            logger.info( "\nshit this nation doesn't exist wat " + str(beige.n_id))
 
-    print "reached the end of the list"
+    logger.info( "reached the end of the list")
     time.sleep(60 * 60)
 
     for bte in beiges_to_expire:
         nation = pwc.get_nation_obj_from_ID(bte,skip_cache=True)
-        print "Did nation expire?", nation.n_id, nation.color
-    raw_input("WAITING ...")
-
-    na_id = 18672
-
-    pwc.get_current_date_in_datetime()
-    pwc.get_nation_obj_from_ID(na_id)
-
-    now = pwc.get_current_date_in_datetime()
-    print pwc.calculate_beige_exit_time(1979) - now
-
-    raw_input("WAITING")
-
-    ids = [
-        996,3766,94,4834,202,1979,228,529,3805
-    ]
-    for n in ids:
-        print n, pwc.calculate_beige_exit_time(n) - now
-
-    war_list = pwc.get_most_recent_wars(na_id)
-
-    print len(war_list)
+        logger.info( "Did nation expire? "+ str(nation.n_id)+ " "+str(nation.color))
+    # raw_input("WAITING ...")
+    #
+    # na_id = 18672
+    #
+    # pwc.get_current_date_in_datetime()
+    # pwc.get_nation_obj_from_ID(na_id)
+    #
+    # now = pwc.get_current_date_in_datetime()
+    # print pwc.calculate_beige_exit_time(1979) - now
+    #
+    # raw_input("WAITING")
+    #
+    # ids = [
+    #     996,3766,94,4834,202,1979,228,529,3805
+    # ]
+    # for n in ids:
+    #     print n, pwc.calculate_beige_exit_time(n) - now
+    #
+    # war_list = pwc.get_most_recent_wars(na_id)
+    #
+    # print len(war_list)
 
     # pwc.calculate_beige_exit_time(na_id)
     # pwc.check_alliance_for_warrable_inactives(1356)
