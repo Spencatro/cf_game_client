@@ -28,39 +28,98 @@ def stringify_children(node):
     # filter removes possible Nones in texts and tails
     return ''.join(filter(None, parts))
 
+
+def _get_param_from_url(url_string, param):
+    # TODO: use this where appropriate
+    param += "="
+    idx = url_string.index(param) + len(param)
+    url_string = url_string[idx:]
+    try:
+        end_idx = url_string.index('&')
+    except:
+        end_idx = len(url_string)
+    return url_string[:end_idx].strip()
+
 class NationDoesNotExistError(Exception): pass
 class WhyIsNationInBeige(Exception): pass
+class NationIsNotInBeige(Exception): pass
+
+class Battle:
+
+    BATTLE_GROUND = "ground attack" #
+    BATTLE_AIR = "an airstrike" #
+    BATTLE_DOGFIGHT = "dogfight airstrike" #
+    BATTLE_NAVAL = "naval attack" #
+    BATTLE_MISSILE_STRIKE = "launched a missile" #
+    BATTLE_NUCLEAR_DETONATION = "detonated a nuclear weapon" #
+    BATTLE_DECLARATION = "declared war upon" #
+    BATTLE_TRUCE_AGREEMENT = "have agreed upon a truce" #
+    BATTLE_COMPLETION = "immediate surrender" #
+    BATTLE_EXPIRATION = "conflict expired"
+
+    BATTLE_TYPES = [BATTLE_GROUND, BATTLE_AIR, BATTLE_DOGFIGHT, BATTLE_NAVAL, BATTLE_MISSILE_STRIKE, BATTLE_NUCLEAR_DETONATION, BATTLE_DECLARATION, BATTLE_TRUCE_AGREEMENT, BATTLE_COMPLETION, BATTLE_EXPIRATION]
+
+    @classmethod
+    def from_nodes(cls, war_id, time_string, description):
+
+        date_format = "%m/%d/%Y %I:%M %p"
+        time_of_battle = datetime.datetime.strptime(time_string.strip(), date_format)
+
+        fight_string = stringify_children(description)
+
+        battle_type = None
+        for bt in Battle.BATTLE_TYPES:
+            if bt in fight_string:
+                battle_type = bt
+        if battle_type is None:
+            raise Exception("Don't know how to parse "+fight_string)
+
+
+        ended_war = battle_type == Battle.BATTLE_COMPLETION
+        immense_triumph = "immense triumph" in fight_string
+
+        if battle_type == Battle.BATTLE_EXPIRATION:
+            actor_id = None
+            defender_id = None
+        else:
+            actor_id = _get_param_from_url(description[0].attrib['href'], "id")
+            defender_id = _get_param_from_url(description[1].attrib['href'],"id")
+
+        return Battle(war_id, time_of_battle, actor_id, defender_id, battle_type, immense_triumph, ended_war)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "<Battle, time="+str(self.time_of_battle)+", war="+str(self.war_id)+", actor="+str(self.actor_id)+", defender_id="+str(self.defender_id)+", type="+self.battle_type+", imm tri="+str(self.immense_triumph)+">"
+
+    def __init__(self, war_id, time_of_battle, actor_id, defender_id, battle_type, immense_triumph, ended_war = False):
+        self.war_id = war_id
+        self.time_of_battle = time_of_battle
+        self.actor_id = actor_id
+        self.defender_id = defender_id
+        self.battle_type = battle_type
+        self.immense_triumph = immense_triumph
+        self.ended_war = ended_war
+        self.is_declaration = battle_type == Battle.BATTLE_DECLARATION
 
 class War:
-    def __init__(self, war_id, aggressor_id, defender_id,date_started,date_ended = None, winner_id = None, last_nuclear_strike_against = {}):
+    def __init__(self, war_id, battles = None):
         self.war_id = war_id
-        self.aggressor = aggressor_id
-        self.defender = defender_id
+        self.battles = battles
+        self.date_ended = None
+        self.date_started = None
+        self.winner_id = None
+        if self.battles is None:
+            self.battles = []
+        self.date_started = self.battles[0].time_of_battle
         self.in_progress = False
-        self.date_started = date_started
-        self.date_ended = date_ended
-        self.winner_id = winner_id
-        self.last_nuclear_strike_against = last_nuclear_strike_against
-
-        if winner_id is None:
-            self.in_progress = True
-
-    def set_winner(self, winner_id, date_ended):
-        self.in_progress = False
-        self.winner_id = winner_id
-        self.date_ended = date_ended
-
-    def can_contribute_to_beige(self, current_date):
-        if self.in_progress:
-            return False
-        if self.date_ended is None:
-            return False
-        assert isinstance(current_date, datetime)
-        time_difference = current_date - self.date_ended
-        seconds = time_difference.total_seconds()
-        if seconds < timedelta(days=14).total_seconds():
-            return True
-        return False
+        for b in self.battles:
+            assert isinstance(b, Battle)
+            if b.ended_war:
+                self.date_ended = b.time_of_battle
+                self.in_progress = False
+                self.winner_id = b.actor_id
 
     def __str__(self):
         representation = "<War: "+str(self.war_id) + ", winner:"
@@ -68,7 +127,7 @@ class War:
             representation += " inconclusive"
         else:
             representation += str(self.winner_id)
-        representation += ", nuclear war: "+str(len(self.last_nuclear_strike_against.keys()) > 0)+">"
+        representation += ">"
         return str(representation)
 
     def __repr__(self):
@@ -245,17 +304,6 @@ class PWClient:
         if more_pages:
             for nation in self._generate_full_query_list(url, minimum=minimum+maximum):
                 yield nation
-
-    def _get_param_from_url(self, url_string, param):
-        # TODO: use this where appropriate
-        param += "="
-        idx = url_string.index(param) + len(param)
-        url_string = url_string[idx:]
-        try:
-            end_idx = url_string.index('&')
-        except:
-            end_idx = len(url_string)
-        return url_string[:end_idx].strip()
 
     def set_db(self, db):
         # TOOD: this
@@ -483,9 +531,9 @@ class PWClient:
                 continue # skip empty row
             date = tr[0].text
             aggressor_url = tr[1][0].attrib['href']
-            aggressor = self._get_param_from_url(aggressor_url, "id")
+            aggressor = _get_param_from_url(aggressor_url, "id")
             defender_url = tr[2][0].attrib['href']
-            defender = self._get_param_from_url(defender_url, "id")
+            defender = _get_param_from_url(defender_url, "id")
             war_state = tr[3][0].text
             query_dict = {'aggressor':aggressor, 'defender':defender, 'date':date}
             war_cursor = self.wars_collection.find(query_dict)
@@ -538,19 +586,21 @@ class PWClient:
     def calculate_beige_exit_time(self, n_id):
         nation = self.get_nation_obj_from_ID(n_id)
         if nation.color != "Beige":
-            raise Exception("Error: nation is not in beige!")
-        recent_wars = self.get_most_recent_wars(n_id)
+            raise NationIsNotInBeige(str(nation.n_id))
+        wars = self.get_wars(n_id)
+
+        all_battles = self.assemble_sorted_battle_list_from_wars(wars)
+
         last_lost_date = None
-        for lost_war in [r_war for r_war in recent_wars if not r_war.in_progress and str(r_war.winner_id) != str(n_id) or str(n_id) in r_war.last_nuclear_strike_against.keys()]:
-            assert isinstance(lost_war, War)
-            if not lost_war.in_progress and lost_war.winner_id != str(n_id):
-                if last_lost_date is None or last_lost_date < lost_war.date_ended:
-                    last_lost_date = lost_war.date_ended
-            if len(lost_war.last_nuclear_strike_against) > 0:
-                if str(n_id) in lost_war.last_nuclear_strike_against.keys():
-                    nuke_time = lost_war.last_nuclear_strike_against[str(n_id)]
-                    if last_lost_date is None or last_lost_date < nuke_time:
-                        last_lost_date = nuke_time
+        for battle in all_battles:
+            if battle.ended_war and str(battle.actor_id) != (n_id):
+                if last_lost_date is None:
+                    last_lost_date = battle.time_of_battle
+                elif battle.time_of_battle - last_lost_date < BEIGE_WAR_TIMEDELTA:
+                    last_lost_date = battle.time_of_battle
+                else:
+                    last_lost_date = None # gone past the 5 day limit, start over
+
         if last_lost_date is not None and self.get_next_turn_in_datetime() - self.get_next_turn_in_datetime(last_lost_date) <= BEIGE_WAR_TIMEDELTA:
             return last_lost_date + BEIGE_WAR_TIMEDELTA
         # wasn't a war that kicked into beige, must be creation date
@@ -560,54 +610,28 @@ class PWClient:
 
     def get_war_obj_from_id(self, war_id):
         # idx = 1 because on war screens there are actually 3 separate nationtables. We want the second, 0 indexed -> 1
-        nationtable = self._retrieve_nationtable(self.__root_url+"/nation/war/timeline/war="+war_id,1)
-        tr_list = nationtable.findall(".//tr")
-        last_idx = len(tr_list) - 1
+        nationtable = self._retrieve_nationtable(self.__root_url+"/nation/war/timeline/war="+str(war_id),1)
+        battle_nodes = nationtable.findall(".//tr")
 
-        first_fight = tr_list[0][0][0].text
-        last_fight = tr_list[last_idx][0][0].text
+        battle_objs = []
 
-        date_format = "%m/%d/%Y %I:%M %p"
+        for battle_idx in range(len(battle_nodes)):
+            battle = battle_nodes[battle_idx]
+            battle_time = battle[0][0].text
+            battle_description = battle[1][0]
+            try:
+                new_battle = Battle.from_nodes(war_id=war_id,time_string =battle_time, description =battle_description)
+            except:
+                print stringify_children(battle_description)
+                raise
+            if not new_battle.is_declaration:
+                battle_objs.append(new_battle)
 
-        aggressor_id = self._get_param_from_url(tr_list[0][1][0][0].attrib['href'], "id")
-        defender_id = self._get_param_from_url(tr_list[0][1][0][1].attrib['href'],"id")
-
-        last_nuclear_strike_against = {} # key is target ID
-
-        # TODO: find any battles that used a nuke
-        for battle_idx in range(len(tr_list)):
-            battle = tr_list[battle_idx]
-            battle_description = stringify_children(battle[1][0])
-            nuke = "nuclear weapon" in battle_description
-
-
-            if nuke:
-                nuke_time_string = battle[0][0].text
-                nuke_time = datetime.datetime.strptime(nuke_time_string, date_format)
-                nuke_launcher = self._get_param_from_url(battle[1][0][0].attrib['href'], "id")
-                nuke_target = self._get_param_from_url(battle[1][0][1].attrib['href'], "id")
-                # print "LAUNCHED BY ~~~~~~",nuke_launcher, "TARGETING",nuke_target, "AT",nuke_time
-                if nuke_target not in last_nuclear_strike_against or last_nuclear_strike_against[nuke_target] < nuke_time:
-                    last_nuclear_strike_against[nuke_target] = nuke_time
-
-        last_fight_description = tr_list[last_idx][1][0][0].tail
-
-        start_date = datetime.datetime.strptime(first_fight.strip(), date_format)
-        end_date = datetime.datetime.strptime(last_fight.strip(), date_format)
-
-        w = War(war_id, aggressor_id,defender_id,start_date,last_nuclear_strike_against=last_nuclear_strike_against)
-
-        war_ended = False
-        if "resulting in the immediate surrender" in last_fight_description:
-            winner_id = self._get_param_from_url(tr_list[last_idx][1][0][0].attrib['href'], "id")
-            war_ended = True
-            w.set_winner(winner_id, end_date)
+        w = War(war_id, battles=battle_objs)
 
         return w
 
-    def get_most_recent_wars(self, nation_id, defensive_only = False, offensive_only = False):
-        if defensive_only and offensive_only:
-            defensive_only = offensive_only = False # you're a doof why did you do "only both" sheesh
+    def get_wars(self, nation_id):
 
         war_url = self.__root_url + "/nation/id="+str(nation_id)+"&display=war"
         nationtable = self._retrieve_nationtable(war_url)
@@ -618,56 +642,28 @@ class PWClient:
                 return war_list
             if tr[0].text == "Date":
                 continue # skip empty row
-            if defensive_only and self._get_param_from_url(tr[1][0].attrib['href'], "id") == str(nation_id):
-                continue # Skip offensive wars
-            if offensive_only and self._get_param_from_url(tr[2][0].attrib['href'], "id") == str(nation_id):
-                continue # skip defensive wars
-            if len(war_list) > 5:
-                return war_list
 
             a_tag = tr[3].find(".//a")
             war_id = a_tag.attrib['href']
-            war_id = self._get_param_from_url(war_id, "war")
+            war_id = _get_param_from_url(war_id, "war")
             war_list.append(self.get_war_obj_from_id(war_id))
         return war_list
+
+    def assemble_sorted_battle_list_from_wars(self, wars):
+        sorted_battles = []
+
+        for war in wars:
+            assert isinstance(war, War)
+            for battle in war.battles:
+                sorted_battles.append(battle)
+        sorted_battles.sort(key=lambda b:b.time_of_battle)
+
+        return sorted_battles
 
 
 if __name__ == "__main__":
 
-    logger = logging.getLogger("pwc")
-    fhandler1 = logging.FileHandler("pwc.out", mode='w')
-    logger.addHandler(fhandler1)
-    logger.setLevel(logging.INFO)
-
-    USERNAME = os.environ['PWUSER']
-    PASS = os.environ['PWPASS']
-    pwc = PWClient(USERNAME, PASS, logger=logger)
-
-    count = 0
-    beiges_to_expire = []
-    for beige in pwc.generate_all_nations_with_color('beige'):
-        try:
-            if pwc.calculate_beige_exit_time(beige.n_id) - pwc.get_current_date_in_datetime() < timedelta(hours=1):
-                count += 1
-                beiges_to_expire.append(beige.n_id)
-                logger.info("")
-                logger.info(str(beige.n_id) + " "+ str(beige.color) + " to expire in less than one hour")
-                logger.info("")
-            else :
-                print ".",
-            if count > 5:
-                break
-        except WhyIsNationInBeige:
-            logger.info("\nshit this nation is in beige, why?? " + str(beige.n_id))
-        except NationDoesNotExistError:
-            logger.info( "\nshit this nation doesn't exist wat " + str(beige.n_id))
-
-    logger.info( "reached the end of the list")
-    time.sleep(60 * 60)
-
-    for bte in beiges_to_expire:
-        nation = pwc.get_nation_obj_from_ID(bte,skip_cache=True)
-        logger.info( "Did nation expire? "+ str(nation.n_id)+ " "+str(nation.color))
+    pass
     # raw_input("WAITING ...")
     #
     # na_id = 18672
