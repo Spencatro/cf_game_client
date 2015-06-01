@@ -87,7 +87,7 @@ for beige in [pwc.get_nation_obj_from_ID(10203)]:
     try:
         time_to_beige_exit = pwc.get_next_turn_in_datetime(pwc.calculate_beige_exit_time(beige.n_id))- pwc.get_current_date_in_datetime()
         if time_to_beige_exit <= datetime.timedelta(hours=2, minutes=30):
-            beiges_to_expire.append(beige.n_id)
+            beiges_to_expire.append(beige)
             logger.info("")
             logger.info(str(beige.n_id) + " "+ str(beige.color) + " to expire in "+str(time_to_beige_exit))
             logger.info("")
