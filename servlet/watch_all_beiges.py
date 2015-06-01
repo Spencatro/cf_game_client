@@ -18,7 +18,7 @@ def send_email(to, subject, html):
     m = GMail(base64.decodestring(b64_un), base64.decodestring(b64_pass))
     m.connect()
     message = Message(subject, to=to, html=html)
-    # m.send(message)
+    m.send(message)
     print "sending", to, subject, html
     m.close()
 
@@ -82,8 +82,8 @@ PASS = os.environ['PWPASS']
 pwc = PWClient(USERNAME, PASS, logger=logger)
 
 beiges_to_expire = []
-for beige in [pwc.get_nation_obj_from_ID(10203)]:
-# for beige in pwc.generate_all_nations_with_color('beige'):
+
+for beige in pwc.generate_all_nations_with_color('beige'):
     try:
         time_to_beige_exit = pwc.get_next_turn_in_datetime(pwc.calculate_beige_exit_time(beige.n_id))- pwc.get_current_date_in_datetime()
         if time_to_beige_exit <= datetime.timedelta(hours=2, minutes=30):
@@ -105,4 +105,4 @@ if len(beiges_to_expire) > 0:
         for line in file:
             recipient = line.strip()
             if len(recipient) > 0:
-                send_email(recipient, 'html table test',create_html_table(beiges_to_expire, pwc.get_next_turn_in_datetime()))
+                send_email(recipient, str(pwc.get_next_turn_in_datetime()) + " Beige Expriations",create_html_table(beiges_to_expire, pwc.get_next_turn_in_datetime()))
