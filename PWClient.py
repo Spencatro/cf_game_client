@@ -1,3 +1,4 @@
+import traceback
 from urllib import urlencode, quote_plus, quote
 import datetime
 from datetime import timedelta
@@ -55,9 +56,11 @@ class Battle:
     BATTLE_DECLARATION = "declared war upon" #
     BATTLE_TRUCE_AGREEMENT = "have agreed upon a truce" #
     BATTLE_COMPLETION = "immediate surrender" #
-    BATTLE_EXPIRATION = "conflict expired"
+    BATTLE_EXPIRATION = "conflict expired" #
+    BATTLE_NO_CHANGE = "continues to rage on" #
 
-    BATTLE_TYPES = [BATTLE_GROUND, BATTLE_AIR, BATTLE_DOGFIGHT, BATTLE_NAVAL, BATTLE_MISSILE_STRIKE, BATTLE_NUCLEAR_DETONATION, BATTLE_DECLARATION, BATTLE_TRUCE_AGREEMENT, BATTLE_COMPLETION, BATTLE_EXPIRATION]
+    BATTLE_TYPES = [BATTLE_GROUND, BATTLE_AIR, BATTLE_DOGFIGHT, BATTLE_NAVAL, BATTLE_MISSILE_STRIKE, BATTLE_NUCLEAR_DETONATION, BATTLE_DECLARATION, BATTLE_TRUCE_AGREEMENT, BATTLE_COMPLETION, BATTLE_EXPIRATION, BATTLE_NO_CHANGE]
+    BATTLE_TYPES_NO_CHANGES = [BATTLE_EXPIRATION, BATTLE_NO_CHANGE]
 
     @classmethod
     def from_nodes(cls, war_id, time_string, description):
@@ -78,7 +81,7 @@ class Battle:
         ended_war = battle_type == Battle.BATTLE_COMPLETION
         immense_triumph = "immense triumph" in fight_string
 
-        if battle_type == Battle.BATTLE_EXPIRATION:
+        if battle_type in Battle.BATTLE_TYPES_NO_CHANGES:
             actor_id = None
             defender_id = None
         else:
@@ -94,6 +97,10 @@ class Battle:
         return "<Battle, time="+str(self.time_of_battle)+", war="+str(self.war_id)+", actor="+str(self.actor_id)+", defender_id="+str(self.defender_id)+", type="+self.battle_type+", imm tri="+str(self.immense_triumph)+">"
 
     def __init__(self, war_id, time_of_battle, actor_id, defender_id, battle_type, immense_triumph, ended_war = False):
+        """
+
+        :rtype : Battle
+        """
         self.war_id = war_id
         self.time_of_battle = time_of_battle
         self.actor_id = actor_id
@@ -105,13 +112,19 @@ class Battle:
 
 class War:
     def __init__(self, war_id, battles = None):
+        """
+        :rtype : War
+        """
         self.war_id = war_id
         self.battles = battles
         self.date_ended = None
         self.date_started = None
         self.winner_id = None
+        if len(battles) == 0:
+            raise Exception("What happened with war "+str(war_id)+"??")
         if self.battles is None:
             self.battles = []
+            raise Exception("What happened with war "+str(war_id)+"??")
         self.date_started = self.battles[0].time_of_battle
         self.in_progress = False
         for b in self.battles:
@@ -357,8 +370,10 @@ class PWClient:
             datestring = str(leftcol[4][1].tail).strip()
             now_year = datetime.datetime.now().year
             reftime = datetime.datetime.strptime(datestring+" "+str(now_year), "%B %d %I:%M %p %Y")
+        plus_hour = 0
         if reftime.hour % 2 == 0:
-            reftime += timedelta(hours=1, minutes=60-reftime.minute)
+            plus_hour = 1
+        reftime += timedelta(hours=plus_hour, minutes=60-reftime.minute)
         return reftime
 
     def get_current_date_in_datetime(self):
@@ -369,6 +384,9 @@ class PWClient:
         return dt
 
     def get_nation_obj_from_ID(self, n_id, skip_cache = False):
+        """
+        @:return Nation Nation
+        """
         # TODO: put a time check on last pull, in case this script ends up being used in ways that take long periods of time
         self._print(2, "Getting nation from ID:",n_id)
         if not skip_cache: # Sometimes may want to force-skip cache
@@ -507,9 +525,10 @@ class PWClient:
                             format_string = "%m/%d %I:%M %p %Y"
                             created_obj = datetime.datetime.strptime(creation_string, format_string)
                             found_something = True
-                            nation.founded_date = created_obj
-                            nation.precisely_founded = True
-                            self._print(3, "Found more precise founded date:",created_obj)
+                            if created_obj > nation.founded_date:
+                                nation.founded_date = created_obj
+                                nation.precisely_founded = True
+                                self._print(3, "Found more precise founded date:",created_obj)
                 except:
                     pass
                 finally:
@@ -583,7 +602,7 @@ class PWClient:
         self._print(2, "Making new notification req: ", url)
         self._print(3, self.__make_http_request(url))
 
-    def calculate_beige_exit_time(self, n_id):
+    def calculate_beige_exit_time(self, n_id, be_stupid_verbose=False):
         nation = self.get_nation_obj_from_ID(n_id)
         if nation.color != "Beige":
             raise NationIsNotInBeige(str(nation.n_id))
@@ -593,17 +612,26 @@ class PWClient:
 
         last_lost_date = None
         for battle in all_battles:
-            if battle.ended_war and str(battle.actor_id) != (n_id):
-                if last_lost_date is None:
+            if battle.immense_triumph and str(battle.actor_id) != str(n_id):
+                if battle.ended_war:
                     last_lost_date = battle.time_of_battle
-                elif battle.time_of_battle - last_lost_date < BEIGE_WAR_TIMEDELTA:
-                    last_lost_date = battle.time_of_battle
+                    if be_stupid_verbose:
+                        print n_id, "exiting beige because of battle ",battle
                 else:
-                    last_lost_date = None # gone past the 5 day limit, start over
+                    if last_lost_date is not None and battle.time_of_battle - last_lost_date < BEIGE_WAR_TIMEDELTA:
+                        last_lost_date = battle.time_of_battle
+                        if be_stupid_verbose:
+                            print n_id, "exiting beige because of battle ",battle
+                    else:
+                        last_lost_date = None # gone past the 5 day limit, start over
+                        if be_stupid_verbose:
+                            print n_id, "jk not exiting because of       ",battle
 
         if last_lost_date is not None and self.get_next_turn_in_datetime() - self.get_next_turn_in_datetime(last_lost_date) <= BEIGE_WAR_TIMEDELTA:
             return last_lost_date + BEIGE_WAR_TIMEDELTA
-        # wasn't a war that kicked into beige, must be creation date
+        # wasn't a war that kicked into beige, must be creation date OR NUKE
+        #TODO: check nukes, figure out if they have extensions
+
         if self.get_next_turn_in_datetime() - self.get_next_turn_in_datetime(nation.founded_date) <= BEIGE_CREATION_TIMEDELTA:
             return nation.founded_date + BEIGE_CREATION_TIMEDELTA
         raise WhyIsNationInBeige("ERROR: Nation "+str(n_id)+" shouldn't be in beige...??!?!?")
@@ -622,10 +650,14 @@ class PWClient:
             try:
                 new_battle = Battle.from_nodes(war_id=war_id,time_string =battle_time, description =battle_description)
             except:
+                print "no idea what happened here"
                 print stringify_children(battle_description)
+                self.logger.error("no idea what happened here")
+                self.logger.error(stringify_children(battle_description))
+                self.logger.error(traceback.format_exc())
+                self.logger.error(traceback.format_stack())
                 raise
-            if not new_battle.is_declaration:
-                battle_objs.append(new_battle)
+            battle_objs.append(new_battle)
 
         w = War(war_id, battles=battle_objs)
 
