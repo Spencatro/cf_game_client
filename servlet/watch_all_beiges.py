@@ -1,5 +1,6 @@
 import sys
-sys.path.append('mlibs') # for non-ide usage
+sys.path.append('/root/politicsandwar/pnw_stats_finder') # for non-ide usage
+sys.path.append('/root/politicsandwar/pnw_stats_finder/servlet/mlibs') # for non-ide usage
 
 from gmail.message import Message
 from gmail.gmail import GMail
