@@ -175,6 +175,12 @@ class Military:
     def __repr__(self):
         return self.__str__()
 
+class Alliance:
+    color = None
+    nations = None
+    founded = None
+    score = None
+    bank_balance = None
 
 class Nation:
     military = None
@@ -305,6 +311,18 @@ class PWClient:
 
         more_pages = False
         for tr in nationtable.findall(".//tr"):
+            yield tr
+
+    def _generate_full_nation_list(self, url, minimum=0, maximum=50):
+        # Note: DO NOT INCLUDE &maximum=n&minimum=m in this url! They will be calculated and added in here!
+        min_max_url = url
+        # only modify this url, will need original unused url for later
+        min_max_url += "&ob=score&maximum="+str(maximum)+"&minimum="+str(minimum)+"&search=Go"
+
+        nationtable = self._retrieve_nationtable(min_max_url)
+
+        more_pages = False
+        for tr in nationtable.findall(".//tr"):
             self._print(3,">tr", len(tr))
             if tr[0].text is not None and re.search('[0-9]+\)', tr[0].text):
                 href = tr[1][0].attrib['href']
@@ -324,15 +342,15 @@ class PWClient:
         raise Exception("Unimplemented, sry")
         pass
 
-    def get_dict_of_alliance_members_from_name(self, a_name):
+    def get_list_of_alliance_members_from_alliance_name(self, a_name):
         self._print(2, "Getting dict for alliance name:",a_name)
         query_url = self.__root_url + "/index.php?id=15&keyword="+quote_plus(str(a_name))+"&cat=alliance"
-        full_dict = {}
+        nations = []
         for nation in self._generate_full_query_list(query_url):
             assert isinstance(nation, Nation)
             n = Nation
-            full_dict[nation.n_id] = nation
-        return full_dict
+            nations.append(nation)
+        return nations
 
     def generate_all_nations_with_color(self, color):
         query_url = self.__root_url + "/index.php?id=15&keyword="+color+"&cat=color"
@@ -342,7 +360,7 @@ class PWClient:
 
     def get_list_of_alliance_members_from_ID(self, a_id):
         a_name = self.get_alliance_name_from_ID(a_id)
-        return self.get_dict_of_alliance_members_from_name(a_name)
+        return self.get_list_of_alliance_members_from_alliance_name(a_name)
 
     def get_alliance_name_from_ID(self, a_id):
         self._print(2, "Getting alliance name from id:",a_id)
@@ -663,6 +681,86 @@ class PWClient:
 
         return w
 
+    def get_alliance_obj_from_id(self, a_id):
+
+        """
+        @:rtype Alliance
+        """
+        # TODO: put a time check on last pull, in case this script ends up being used in ways that take long periods of time
+        self._print(2, "Getting alliance from ID:",a_id)
+
+        url = self.__root_url + "/alliance/id="+str(a_id)
+        nationtable = self._retrieve_nationtable(url)
+
+        alliance = Alliance()
+
+        for tr in nationtable.findall(".//tr"):
+
+            # self.get_nation_obj_from_ID()
+
+            td_key_text = str(tr[0].text).strip()
+            td_key_tag = str(tr[0].tag).strip()
+
+            if td_key_text == "Founded:":
+                date_string = tr[1].text.split(" ")[0]
+                date_obj = datetime.datetime.strptime(date_string, "%m/%d/%Y")
+                alliance.founded = date_obj
+                self._print(3,"FOUND: Founded:",date_obj)
+            elif td_key_text == "National Color:":
+                self._print(3,"FOUND COLOR:", tr[1][0][0].text)
+                alliance.color = tr[1][0][0].text.strip()
+            elif td_key_text == "Score:":
+                self._print(3,"FOUND SCORE:", tr[1].text)
+                alliance.score = float(tr[1].text.strip().replace(",",""))
+        bank_url = url + "&display=bank"
+        bank_ntable = self._retrieve_nationtable(bank_url)
+
+        alliance.bank_balance = {}
+
+        for tr in bank_ntable.findall(".//tr"):
+            if len(tr) > 1 and len(tr[0]) > 0:
+                resource_key = tr[0][0].text.strip()
+                resource_amt_str = tr[0][1].text
+                if resource_amt_str is None:
+                    resource_amt_str = "0"
+                if not resource_key.startswith("When"):
+                    resource_amt = float(resource_amt_str.strip().replace(",","").replace("$",""))
+                    alliance.bank_balance[resource_key] = resource_amt
+
+        return alliance
+
+    def get_alliance_tax_records_from_id(self, a_id):
+        self._print(2, "Getting alliance from ID:",a_id)
+
+        url = self.__root_url + "/alliance/id="+str(a_id)+"&display=banktaxes"
+        nationtable = self._retrieve_nationtable(url)
+        self._generate_full_query_list(url)
+
+        records = []
+
+        for tr in nationtable.findall(".//tr"):
+            tax_record = {}
+            if tr[1].text == "Date":
+                continue
+            transaction_date = tr[1].text
+            tax_record["sender"] = nation_id = _get_param_from_url( tr[1][1][0].attrib['href'], "id" )
+            tax_record["date"] = transaction_date
+            tax_record["money"] = float(tr[1][3].text.strip().replace("$","").replace(",",""))
+            tax_record["food"] = float(tr[1][4].text.strip().replace("$","").replace(",",""))
+            tax_record["coal"] = float(tr[1][5].text.strip().replace("$","").replace(",",""))
+            tax_record["oil"] = float(tr[1][6].text.strip().replace("$","").replace(",",""))
+            tax_record["uranium"] = float(tr[1][7].text.strip().replace("$","").replace(",",""))
+            tax_record["lead"] = float(tr[1][8].text.strip().replace("$","").replace(",",""))
+            tax_record["iron"] = float(tr[1][9].text.strip().replace("$","").replace(",",""))
+            tax_record["bauxite"] = float(tr[1][10].text.strip().replace("$","").replace(",",""))
+            tax_record["gasoline"] = float(tr[1][11].text.strip().replace("$","").replace(",",""))
+            tax_record["munition"] = float(tr[1][12].text.strip().replace("$","").replace(",",""))
+            tax_record["steel"] = float(tr[1][13].text.strip().replace("$","").replace(",",""))
+            tax_record["aluminum"] = float(tr[1][14].text.strip().replace("$","").replace(",",""))
+            print transaction_date, tax_record
+            records.append(tax_record)
+        pass
+
     def get_wars(self, nation_id):
 
         war_url = self.__root_url + "/nation/id="+str(nation_id)+"&display=war"
@@ -694,6 +792,12 @@ class PWClient:
 
 
 if __name__ == "__main__":
+
+    pwc = PWClient(os.environ['PWUSER'], os.environ['PWPASS'])
+    # pwc.get_list_of_alliance_members_from_alliance_name("Charming Friends")
+
+    print pwc.get_alliance_tax_records_from_id(1356)
+    print pwc.get_alliance_obj_from_id(1356)
 
     pass
     # raw_input("WAITING ...")
