@@ -355,7 +355,13 @@ class PWClient:
     def generate_all_nations_with_color(self, color):
         query_url = self.__root_url + "/index.php?id=15&keyword="+color+"&cat=color"
         for nation in self._generate_full_query_list(query_url):
-            yield nation
+            if nation[0].text is not None and re.search('[0-9]+\)', nation[0].text):
+                href = nation[1][0].attrib['href']
+                eq_idx = href.index("=")
+                n_id = int(href[eq_idx+1:])
+                yield self.get_nation_obj_from_ID(n_id)
+
+            # yield nation
 
 
     def get_list_of_alliance_members_from_ID(self, a_id):
