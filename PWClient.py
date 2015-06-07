@@ -5,6 +5,7 @@ from datetime import timedelta
 import httplib2
 import os
 import time
+# import xml.etree.ElementTree as ET
 import lxml.etree as ET
 import re
 import logging
@@ -46,6 +47,9 @@ class WhyIsNationInBeige(Exception): pass
 class NationIsNotInBeige(Exception): pass
 
 class Battle:
+    """
+    Abstraction of battles
+    """
 
     BATTLE_GROUND = "ground attack" #
     BATTLE_AIR = "an airstrike" #
@@ -223,7 +227,7 @@ class PWClient:
         self.__password = password
         self.__using_db = False
 
-        self.__authenticate__()
+        self._authenticate()
         if logger is None:
             logger = logging.getLogger("PWClient")
             hndl = logging.StreamHandler(sys.stdout)
@@ -231,7 +235,11 @@ class PWClient:
             logger.setLevel(logging.INFO)
         self.logger = logger
 
-    def __authenticate__( self ):
+    def _authenticate( self ):
+        """
+        Call this if you have waited a long time between accesses; it resubmits your password to the server so that you can access stuff
+        :return: None
+        """
         self._print(1, "Starting authentication as:",self.__username)
         r,c = self.__make_http_request(self.__root_url+'/login/', body={'email':self.__username, 'password':self.__password, 'sesh':'', 'loginform':'Login'}, request_type='POST')
         if "Login Failure" in c:
@@ -243,6 +251,10 @@ class PWClient:
         self._print(1, "Authentication success!")
 
     def __query_timecheck(self):
+        """
+        ensures that the client doesn't DDOS or spam the server so no one gets banned
+        :return: None
+        """
         current_timestamp = int(round(time.time() * 1000))
         time_difference = current_timestamp - self.__last_request_timestamp
         if time_difference < 10:
@@ -255,6 +267,13 @@ class PWClient:
         self.__last_request_timestamp = time.time() * 1000
 
     def __make_http_request( self, url, body = None, request_type = 'GET' ):
+        """
+        You probably don't need to use this
+        :param url:
+        :param body:
+        :param request_type:
+        :return:
+        """
         self._print(2, "Making HTTP request for: ",url)
         self.__query_timecheck()
         r_headers = self.headers
@@ -270,6 +289,13 @@ class PWClient:
         return response, content
 
     def _print( self, debug_level, *kwargs ):
+        """
+        Keep printing controlled. You probably don't need to use this.
+
+        :param debug_level:
+        :param kwargs:
+        :return:
+        """
         if self.debug >= debug_level:
             logstring = ""
             for arg in kwargs:
@@ -279,6 +305,11 @@ class PWClient:
             self.logger.info(logstring)
 
     def _retrieve_leftcolumn(self):
+        """
+        you probably don't need to use this
+        Retrieve leftcolumn html (where the server time is)
+        :return:
+        """
         self._print("Retrieving leftcolumn")
         status,content = self.__make_http_request(self.__root_url)
         parser = ET.XMLParser(recover=True)
@@ -287,6 +318,14 @@ class PWClient:
         return leftcolumn
 
     def _retrieve_nationtable(self, url, idx=0):
+        """
+        you probably don't need to use this
+
+        get the main table of a page from pnw
+        :param url:
+        :param idx:
+        :return:
+        """
         self._print(1, "Retrieving nationtable for:",url)
         status,content = self.__make_http_request(url)
         if "That nation does not exist." in content:
@@ -296,12 +335,14 @@ class PWClient:
         nationtables = tree.findall(".//table[@class='nationtable']")
         return nationtables[idx]
 
-    # TODO: get alliance info
-    # TODO: get list of nation ID's from alliance ID
-    # TODO: get list of nations who can declare against particular nation ID
-    # TODO: consider downloading all ~3000 nations first, then parsing all the data after?
-
     def _generate_full_query_list(self, url, minimum=0, maximum=50):
+        """
+        don't worry about this, trust me
+        :param url:
+        :param minimum:
+        :param maximum:
+        :return:
+        """
         # Note: DO NOT INCLUDE &maximum=n&minimum=m in this url! They will be calculated and added in here!
         min_max_url = url
         # only modify this url, will need original unused url for later
@@ -314,6 +355,13 @@ class PWClient:
             yield tr
 
     def _generate_full_nation_list(self, url, minimum=0, maximum=50):
+        """
+
+        :param url:
+        :param minimum:
+        :param maximum:
+        :return:
+        """
         # Note: DO NOT INCLUDE &maximum=n&minimum=m in this url! They will be calculated and added in here!
         min_max_url = url
         # only modify this url, will need original unused url for later
@@ -328,7 +376,6 @@ class PWClient:
                 href = tr[1][0].attrib['href']
                 eq_idx = href.index("=")
                 n_id = int(href[eq_idx+1:])
-                nation_idx = int(tr[0].text.replace(')','').replace(',',''))
                 yield self.get_nation_obj_from_ID(n_id)
                 more_pages = True
 
@@ -342,9 +389,15 @@ class PWClient:
         raise Exception("Unimplemented, sry")
         pass
 
-    def get_list_of_alliance_members_from_alliance_name(self, a_name):
-        self._print(2, "Getting dict for alliance name:",a_name)
-        query_url = self.__root_url + "/index.php?id=15&keyword="+quote_plus(str(a_name))+"&cat=alliance"
+    def get_list_of_alliance_members_from_alliance_name(self, alliance_name):
+        """
+        Get a list of nations from an alliance name (e.g. "Charming Friends").
+
+        :param alliance_name: a string representing an alliance's name (e.g. "Charming Friends"
+        :return: list of nations
+        """
+        self._print(2, "Getting dict for alliance name:",alliance_name)
+        query_url = self.__root_url + "/index.php?id=15&keyword="+quote_plus(str(alliance_name))+"&cat=alliance"
         nations = []
         for nation in self._generate_full_query_list(query_url):
             assert isinstance(nation, Nation)
@@ -353,24 +406,54 @@ class PWClient:
         return nations
 
     def generate_all_nations_with_color(self, color):
+        """
+
+        This is hard to explain how it works, but easy to explain how to use it. This will return a list--sort of. You can iterate over it like this:
+
+        for nation in client.get_all_nations_with_color('beige'):
+            print nation.nation_id
+
+        generators are hard to explain the backend of but the idea is that it makes the program "appear" to be running faster.
+
+        :param color: A string (e.g. "beige") representing a color to search for
+        :return Nation generator object
+        """
         query_url = self.__root_url + "/index.php?id=15&keyword="+color+"&cat=color"
-        for nation in self._generate_full_query_list(query_url):
-            if nation[0].text is not None and re.search('[0-9]+\)', nation[0].text):
-                href = nation[1][0].attrib['href']
-                eq_idx = href.index("=")
-                n_id = int(href[eq_idx+1:])
-                yield self.get_nation_obj_from_ID(n_id)
+        for nation in self._generate_full_nation_list(query_url):
+            yield nation
 
-            # yield nation
+    def get_list_of_alliance_members_from_ID(self, alliance_id):
+        """
+        returns an iterable list of nation objects from an alliance's ID.
 
+        example usage:
 
-    def get_list_of_alliance_members_from_ID(self, a_id):
-        a_name = self.get_alliance_name_from_ID(a_id)
+        list = client.get_list_get_list_of_alliance_members_from_ID(1234)
+        for nation in list:
+            print nation.nation_id
+
+        :param alliance_id: a number representing an alliance ID
+        :return: a list of Nation objects
+        :rtype list
+        """
+        a_name = self.get_alliance_name_from_ID(alliance_id)
         return self.get_list_of_alliance_members_from_alliance_name(a_name)
 
-    def get_alliance_name_from_ID(self, a_id):
-        self._print(2, "Getting alliance name from id:",a_id)
-        alliance_url = self.__root_url + "/alliance/id="+str(a_id)
+    def get_alliance_name_from_ID(self, alliance_id):
+        """
+        returns an string of an alliance's name from their alliance ID.
+
+        example usage:
+
+        alliance_name = client.get_alliance_name_from_ID(1234)
+        print alliance_name # prints the name representation of the alliance
+
+        :param alliance_id: a number representing an alliance ID
+        :return: str alliance_name
+        :rtype str
+        """
+        self._print(2, "Getting alliance name from id:",alliance_id)
+        alliance_url = self.__root_url + "/alliance/id="+str(alliance_id)
 
         status,content = self.__make_http_request(alliance_url)
         parser = ET.XMLParser(recover=True)
@@ -382,13 +465,44 @@ class PWClient:
         self._print(2, "Alliance name found: ",title)
         return title
 
-    def get_nation_name_from_id(self, n_id):
-        if n_id in self.nation_cache.keys():
-            return self.nation_cache[n_id].name
-        n = self.get_nation_obj_from_ID(n_id)
+    def get_nation_name_from_id(self, nation_id):
+        """
+        returns an string of a nation's name from their nation ID.
+
+        example usage:
+
+        nation_name = client.get_nation_name_from_ID(1234)
+        print nation_name # prints the name representation of the nation
+
+        :param nation_id: a number representing a nation ID
+        :return: str nation_name
+        :rtype str
+        """
+        if nation_id in self.nation_cache.keys():
+            return self.nation_cache[nation_id].name
+        n = self.get_nation_obj_from_ID(nation_id)
         return n.name
 
     def get_next_turn_in_datetime(self, reftime=None):
+        """
+        returns a datetime object of the next turn. If given a reference time, returns a datetime object of the next
+        turn after the reference time.
+
+        example usage:
+
+        next_turn = client.get_next_turn_in_datetime()
+        print next_turn # prints the date and time of the next turn
+
+        OR
+
+        next_turn_after_nation_leaves_beige = \
+            client.get_next_turn_in_datetime(client.calculate_beige_exit_time(1234))
+        print next_turn_after_nation_leaves_beige # prints the date and time of the turn that a nation will leave beige
+
+        :param reftime: a datetime object representing a reference time
+        :return: datetime alliance_name
+        :rtype datetime
+        """
         if reftime is None:
             leftcol = self._retrieve_leftcolumn()
             datestring = str(leftcol[4][1].tail).strip()
@@ -401,6 +515,17 @@ class PWClient:
         return reftime
 
     def get_current_date_in_datetime(self):
+        """
+        returns a datetime object of the server's current date.
+
+        example usage:
+
+        current_time = client.get_current_date_in_datetime()
+        print current_time # prints the date and time w.r.t the server
+
+        :return: datetime current_time
+        :rtype datetime
+        """
         leftcol = self._retrieve_leftcolumn()
         datestring = str(leftcol[4][1].tail).strip()
         now_year = datetime.datetime.now().year
@@ -409,7 +534,15 @@ class PWClient:
 
     def get_nation_obj_from_ID(self, n_id, skip_cache = False):
         """
-        @:return Nation Nation
+        returns a nation object from a nations ID. If skip_cache = True, this will pull the webpage even if it is cached
+
+        example usage:
+
+        nation = client.get_nation_obj_from_ID(1234)
+        print nation.military.soldiers
+
+        :return: nation nation
+        :rtype Nation
         """
         # TODO: put a time check on last pull, in case this script ends up being used in ways that take long periods of time
         self._print(2, "Getting nation from ID:",n_id)
@@ -562,71 +695,29 @@ class PWClient:
         self.nation_cache[n_id] = nation
         return nation
 
-    def check_nation_for_wars(self, nation_id):
-        if not self.__using_db:
-            raise Exception("Can't do this because not using a database")
-
-        war_url = self.__root_url + "/nation/id="+str(nation_id)+"&display=war"
-        nationtable = self._retrieve_nationtable(war_url)
-
-        for tr in nationtable.findall(".//tr"):
-            if tr[0].text == "Date":
-                continue # skip empty row
-            date = tr[0].text
-            aggressor_url = tr[1][0].attrib['href']
-            aggressor = _get_param_from_url(aggressor_url, "id")
-            defender_url = tr[2][0].attrib['href']
-            defender = _get_param_from_url(defender_url, "id")
-            war_state = tr[3][0].text
-            query_dict = {'aggressor':aggressor, 'defender':defender, 'date':date}
-            war_cursor = self.wars_collection.find(query_dict)
-            if war_cursor.count() == 0:
-                query_dict['war_state'] = war_state
-                # TODO: replace this print with an actual notification
-                print "Notification! Inserting into colleciton: ",query_dict
-                print "Aggressor:", self.get_nation_name_from_id(aggressor)
-                print "Defender:", self.get_nation_name_from_id(defender)
-                self.wars_collection.insert(query_dict)
-                # TODO: insert into db
-            else:
-                db_war_obj = war_cursor.next()
-                db_war_state = db_war_obj['war_state']
-                if db_war_state != war_state:
-                    # TODO: make a notification
-                    print "------------------------"
-                    print "Notification! Old state: ",db_war_obj
-                    print "Aggressor:", self.get_nation_name_from_id(aggressor)
-                    print "Defender:", self.get_nation_name_from_id(defender)
-                    db_war_obj['war_state'] = war_state
-                    print "New state: ",db_war_obj
-
-    def check_alliance_for_wars(self, a_id):
-        alliance_list = self.get_list_of_alliance_members_from_ID(a_id)
-        for n_id in alliance_list:
-            self.check_nation_for_wars(n_id)
-
-    def check_alliance_for_warrable_inactives(self, a_id):
-        alliance_list = self.get_list_of_alliance_members_from_ID(a_id)
-        nation_scores = [alliance_list[nation_key].score for nation_key in alliance_list]
-        all_warrable_nations = []
-        for nation_key in alliance_list:
-            nation = alliance_list[nation_key]
-            query_url = self.__root_url + "/index.php?id=15&keyword="+str(nation.score)+"&cat=war_range&ob=score&od=ASC&search=Go"
-            for other_nation in self._generate_full_query_list(query_url):
-                assert isinstance(other_nation, Nation)
-                if not nation.n_id in other_nation.warrable_list:
-                    other_nation.warrable_list.append(nation.n_id)
-                if not other_nation.n_id in all_warrable_nations:
-                    all_warrable_nations.append(other_nation.n_id)
-        for n_id in all_warrable_nations:
-            n_obj = self.get_nation_obj_from_ID(n_id)
-
     def queue_new_notification(self, to, subject, body, seconds_until_notification):
+        """
+        This will send an email in a certain number of seconds
+
+        :param to: string representing an email address (e.g. "someone@gmail.com"
+        :param subject: string representing a subject (e.g. "Important PNW email!"
+        :param body: string representing a body (e.g. "just kidding it wasn't that important lol")
+        :param seconds_until_notification: the number of seconds the server should wait before sending (e.g. for thirty minute delay:  60 * 30 )
+        :return: None
+        """
         url = "http://radiofreaq.spencer-hawkins.com:5000/queue_n/"+quote(to)+"/"+quote(subject)+"/"+quote(body)+"/"+quote(str(seconds_until_notification))+"/"
         self._print(2, "Making new notification req: ", url)
         self._print(3, self.__make_http_request(url))
 
     def calculate_beige_exit_time(self, n_id, be_stupid_verbose=False):
+        """
+        Calculates the time that a nation is expected to leave beige.
+
+        :param n_id: int representing a nation's ID
+        :param be_stupid_verbose: print lots of dumb things. Useful for debugging
+        :return: datetime object representing the exact (but not turn-biased) time a nation will leave beige
+        :rtype War
+        """
         nation = self.get_nation_obj_from_ID(n_id)
         if nation.color != "Beige":
             raise NationIsNotInBeige(str(nation.n_id))
@@ -661,6 +752,12 @@ class PWClient:
         raise WhyIsNationInBeige("ERROR: Nation "+str(n_id)+" shouldn't be in beige...??!?!?")
 
     def get_war_obj_from_id(self, war_id):
+        """
+        Returns a war object based on a war ID number
+        :param war_id: int representing a war number
+        :return: War
+        :rtype War
+        """
         # idx = 1 because on war screens there are actually 3 separate nationtables. We want the second, 0 indexed -> 1
         nationtable = self._retrieve_nationtable(self.__root_url+"/nation/war/timeline/war="+str(war_id),1)
         battle_nodes = nationtable.findall(".//tr")
@@ -687,15 +784,17 @@ class PWClient:
 
         return w
 
-    def get_alliance_obj_from_id(self, a_id):
-
+    def get_alliance_obj_from_id(self, alliance_id):
         """
-        @:rtype Alliance
+        Returns an alliance object based on an alliance ID number
+        :param alliance_id: int representing an alliance ID number
+        :return: Alliance
+        :rtype Alliance
         """
         # TODO: put a time check on last pull, in case this script ends up being used in ways that take long periods of time
-        self._print(2, "Getting alliance from ID:",a_id)
+        self._print(2, "Getting alliance from ID:",alliance_id)
 
-        url = self.__root_url + "/alliance/id="+str(a_id)
+        url = self.__root_url + "/alliance/id="+str(alliance_id)
         nationtable = self._retrieve_nationtable(url)
 
         alliance = Alliance()
@@ -735,10 +834,15 @@ class PWClient:
 
         return alliance
 
-    def get_alliance_tax_records_from_id(self, a_id):
-        self._print(2, "Getting alliance from ID:",a_id)
+    def get_alliance_tax_records_from_id(self, alliance_id):
+        """
+        NOT IMPLEMENTED
+        :param alliance_id: number representing an alliance's ID number
+        :return: NONE yet
+        """
+        self._print(2, "Getting alliance from ID:",alliance_id)
 
-        url = self.__root_url + "/alliance/id="+str(a_id)+"&display=banktaxes"
+        url = self.__root_url + "/alliance/id="+str(alliance_id)+"&display=banktaxes"
         nationtable = self._retrieve_nationtable(url)
         self._generate_full_query_list(url)
 
