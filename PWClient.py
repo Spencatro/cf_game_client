@@ -681,6 +681,11 @@ class PWClient:
                             creation_string = tr[0][0].text[:-3]+" "+str(now_year)
                             format_string = "%m/%d %I:%M %p %Y"
                             created_obj = datetime.datetime.strptime(creation_string, format_string)
+                            if datetime.datetime.now() < created_obj:
+                                #This is in the future, oops, fix it I guess (this is bad but w/e)
+                                creation_string = tr[0][0].text[:-3]+" "+str(nation.founded_date.year)
+                                format_string = "%m/%d %I:%M %p %Y"
+                                created_obj = datetime.datetime.strptime(creation_string, format_string)
                             found_something = True
                             if created_obj > nation.founded_date:
                                 nation.founded_date = created_obj
@@ -749,7 +754,9 @@ class PWClient:
 
         if self.get_next_turn_in_datetime() - self.get_next_turn_in_datetime(nation.founded_date) <= BEIGE_CREATION_TIMEDELTA:
             return nation.founded_date + BEIGE_CREATION_TIMEDELTA
-        raise WhyIsNationInBeige("ERROR: Nation "+str(n_id)+" shouldn't be in beige...??!?!?")
+        sys.stderr.write(str(WhyIsNationInBeige("ERROR: Nation "+str(n_id)+" shouldn't be in beige...??!?!?")))
+        sys.stderr.write("Returning very inaccurate time difference!")
+        return datetime.datetime.now() + BEIGE_WAR_TIMEDELTA
 
     def get_war_obj_from_id(self, war_id):
         """
