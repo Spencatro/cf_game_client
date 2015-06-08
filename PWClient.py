@@ -483,6 +483,18 @@ class PWClient:
         n = self.get_nation_obj_from_ID(nation_id)
         return n.name
 
+    def get_alliance_score_from_id(self, alliance_id):
+        alliance_score = 0
+        for nation in self.get_list_of_alliance_members_from_ID(alliance_id):
+            alliance_score += nation.score
+        return alliance_score
+
+    def get_alliance_average_score_from_id (self, alliance_id):
+        total_score = self.get_alliance_score_from_id(alliance_id)
+        number = len(self.get_list_of_alliance_members_from_ID(alliance_id))
+        return total_score/float(number)
+
+
     def get_next_turn_in_datetime(self, reftime=None):
         """
         returns a datetime object of the next turn. If given a reference time, returns a datetime object of the next
