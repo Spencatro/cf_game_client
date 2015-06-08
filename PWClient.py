@@ -380,7 +380,7 @@ class PWClient:
                 more_pages = True
 
         if more_pages:
-            for nation in self._generate_full_query_list(url, minimum=minimum+maximum):
+            for nation in self._generate_full_nation_list(url, minimum=minimum+maximum):
                 yield nation
 
     def set_db(self, db):
