@@ -399,7 +399,7 @@ class PWClient:
         self._print(2, "Getting dict for alliance name:",alliance_name)
         query_url = self.__root_url + "/index.php?id=15&keyword="+quote_plus(str(alliance_name))+"&cat=alliance"
         nations = []
-        for nation in self._generate_full_query_list(query_url):
+        for nation in self._generate_full_nation_list(query_url):
             assert isinstance(nation, Nation)
             n = Nation
             nations.append(nation)
