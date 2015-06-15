@@ -32,7 +32,7 @@ class RequestBot:
         iron_owed =         nation_tax_db[owed_key]['iron']
         bauxite_owed =      nation_tax_db[owed_key]['bauxite']
         gasoline_owed =     nation_tax_db[owed_key]['gasoline']
-        munitions_owed =    nation_tax_db[owed_key]['munitions']
+        munitions_owed =    nation_tax_db[owed_key]['munition']
         steel_owed =        nation_tax_db[owed_key]['steel']
         aluminum_owed =     nation_tax_db[owed_key]['aluminum']
 
