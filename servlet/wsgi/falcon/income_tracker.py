@@ -26,6 +26,11 @@ class IncomeTracker:
 
         pwc.debug = DEBUG_LEVEL_STFU
         records = pwc.get_alliance_tax_records_from_id(1356, only_last_turn=True)
+
+        for record in records:
+            if str(record['sender']).strip() == str(17270):
+                print record
+
         average_score = pwc.get_alliance_average_score_from_id(1356)
         total_score = pwc.get_alliance_score_from_id(1356)
 
@@ -58,7 +63,6 @@ class IncomeTracker:
         total_returned_from_collected = {}
         # This tracks how much was retained by each nation
         total_retained_this_turn = {}
-
 
         # Apply baserate
         for record in records:
@@ -105,8 +109,13 @@ class IncomeTracker:
 
             pwdb.set_nation(nation_id, nation_tax_db)
 
+            if str(record['sender']).strip() == str(17270):
+                print record
+                print "first set: ", pwdb.get_nation(nation_id)
+
         # Determine who is still owed from reserves
-        collectors = [record for record in records if record[can_collect_key] and record['nation_obj'].color != "gray"]   # TODO: FIX THIS
+        collectors = [record for record in records if record[can_collect_key]
+                      and not record['nation_obj'].color.strip() == "Gray"]
 
         """
         Differential percentage is a metric that calculates the "percent difference" you are away from the alliance score
@@ -140,16 +149,20 @@ class IncomeTracker:
 
             pwdb.set_nation(nation_id, nation_tax_db)
 
-        print "Diff percent total: ",sum_diff_percentage
+            if str(record['sender']).strip() == str(17270):
+                print record
+                print "second set: ", pwdb.get_nation(nation_id)
 
-        for key in ACTUAL_TOTAL.keys():
-            print "         ", key
-            print "actual   ", ACTUAL_TOTAL[key]
-            print "collected", total_collected_this_turn[key]
-            print "returned ", total_returned_from_collected[key]
-            print "retained ", total_retained_this_turn[key]
+        # print "Diff percent total: ",sum_diff_percentage
 
-            # Inputs equaled output
-            print "==?"
-            print total_retained_this_turn[key] + total_collected_this_turn[key]
-            print ACTUAL_TOTAL[key]
+        # for key in ACTUAL_TOTAL.keys():
+            # print "         ", key
+            # print "actual   ", ACTUAL_TOTAL[key]
+            # print "collected", total_collected_this_turn[key]
+            # print "returned ", total_returned_from_collected[key]
+            # print "retained ", total_retained_this_turn[key]
+            #
+            # # Inputs equaled output
+            # print "==?"
+            # print total_retained_this_turn[key] + total_collected_this_turn[key]
+            # print ACTUAL_TOTAL[key]
