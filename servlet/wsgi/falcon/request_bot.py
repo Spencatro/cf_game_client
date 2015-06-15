@@ -51,7 +51,7 @@ class RequestBot:
         nation_tax_db[owed_key]['iron'] =     0
         nation_tax_db[owed_key]['bauxite'] =  0
         nation_tax_db[owed_key]['gasoline'] = 0
-        nation_tax_db[owed_key]['munitions'] =0
+        nation_tax_db[owed_key]['munition'] = 0
         nation_tax_db[owed_key]['steel'] =    0
         nation_tax_db[owed_key]['aluminum'] = 0
 
