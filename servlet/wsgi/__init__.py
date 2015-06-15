@@ -91,7 +91,7 @@ def make_request():
 
         renderstring = "Request accepted!<br />"
         for key in results.keys():
-            renderstring += key+" returned: "+results[key]+"<br />"
+            renderstring += key+" returned: "+str(results[key])+"<br />"
 
         return renderstring
 
