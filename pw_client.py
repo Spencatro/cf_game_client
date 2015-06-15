@@ -202,7 +202,7 @@ class Nation:
     founded_date = None
     leader = None
     name = None
-    n_id = None
+    nation_id = None
     time_since_active = None
     precisely_founded = False
 
@@ -350,8 +350,14 @@ class PWClient:
 
         nationtable = self._retrieve_nationtable(min_max_url)
 
-        more_pages = False
         for tr in nationtable.findall(".//tr"):
+            if len(tr) < 1 or tr[0].tag == "th":
+                continue
+            if "Your search returned 0 results." in stringify_children(tr):
+                raise StopIteration()
+            yield tr
+
+        for tr in self._generate_full_query_list(url, minimum=minimum+maximum):
             yield tr
 
     def _generate_full_nation_list(self, url, minimum=0, maximum=50):
@@ -375,8 +381,8 @@ class PWClient:
             if tr[0].text is not None and re.search('[0-9]+\)', tr[0].text):
                 href = tr[1][0].attrib['href']
                 eq_idx = href.index("=")
-                n_id = int(href[eq_idx+1:])
-                yield self.get_nation_obj_from_ID(n_id)
+                nation_id = int(href[eq_idx+1:])
+                yield self.get_nation_obj_from_ID(nation_id)
                 more_pages = True
 
         if more_pages:
@@ -491,8 +497,7 @@ class PWClient:
 
     def get_alliance_average_score_from_id (self, alliance_id):
         total_score = self.get_alliance_score_from_id(alliance_id)
-        number = len(self.get_list_of_alliance_members_from_ID(alliance_id))
-        return total_score/float(number)
+        return total_score/float(self.get_number_of_members_in_alliance_by_id(alliance_id))
 
 
     def get_next_turn_in_datetime(self, reftime=None):
@@ -544,7 +549,7 @@ class PWClient:
         dt = datetime.datetime.strptime(datestring+" "+str(now_year), "%B %d %I:%M %p %Y")
         return dt
 
-    def get_nation_obj_from_ID(self, n_id, skip_cache = False):
+    def get_nation_obj_from_ID(self,nation_id, skip_cache = False):
         """
         returns a nation object from a nations ID. If skip_cache = True, this will pull the webpage even if it is cached
 
@@ -557,20 +562,22 @@ class PWClient:
         :rtype Nation
         """
         # TODO: put a time check on last pull, in case this script ends up being used in ways that take long periods of time
-        self._print(2, "Getting nation from ID:",n_id)
+        nation_id = str(nation_id)
+
+        self._print(2, "Getting nation from ID:",nation_id)
         if not skip_cache: # Sometimes may want to force-skip cache
-            if n_id in self.nation_cache.keys():
-                self._print(2, "Cache hit on ",n_id,"! Skipping download")
-                return self.nation_cache[n_id]
+            if nation_id in self.nation_cache.keys():
+                self._print(2, "Cache hit on ",nation_id,"! Skipping download")
+                return self.nation_cache[nation_id]
 
         # Not in cache, go pull data
-        url = self.__root_url + "/nation/id="+str(n_id)
+        url = self.__root_url + "/nation/id="+nation_id
         nationtable = self._retrieve_nationtable(url)
 
         nation = Nation()
         military = Military()
 
-        nation.n_id = n_id
+        nation.nation_id =nation_id
 
         for tr in nationtable.findall(".//tr"):
             self._print(3,">tr", len(tr))
@@ -709,7 +716,7 @@ class PWClient:
                     if not found_something:
                         self._print(3, "Unknown key:",td_key_tag, td_key_text)
         nation.military = military
-        self.nation_cache[n_id] = nation
+        self.nation_cache[nation_id] = nation
         return nation
 
     def queue_new_notification(self, to, subject, body, seconds_until_notification):
@@ -726,47 +733,52 @@ class PWClient:
         self._print(2, "Making new notification req: ", url)
         self._print(3, self.__make_http_request(url))
 
-    def calculate_beige_exit_time(self, n_id, be_stupid_verbose=False):
+    def calculate_beige_exit_time(self,nation_id, be_stupid_verbose=False):
         """
         Calculates the time that a nation is expected to leave beige.
 
-        :param n_id: int representing a nation's ID
+        :paramnation_id: int representing a nation's ID
         :param be_stupid_verbose: print lots of dumb things. Useful for debugging
         :return: datetime object representing the exact (but not turn-biased) time a nation will leave beige
         :rtype War
         """
-        nation = self.get_nation_obj_from_ID(n_id)
+        nation = self.get_nation_obj_from_ID(nation_id)
         if nation.color != "Beige":
-            raise NationIsNotInBeige(str(nation.n_id))
-        wars = self.get_wars(n_id)
+            raise NationIsNotInBeige(str(nation.nation_id))
+        wars = self.get_wars(nation_id)
 
         all_battles = self.assemble_sorted_battle_list_from_wars(wars)
 
         last_lost_date = None
         for battle in all_battles:
-            if battle.immense_triumph and str(battle.actor_id) != str(n_id):
+            if battle.immense_triumph and str(battle.actor_id) != str(nation_id):
                 if battle.ended_war:
                     last_lost_date = battle.time_of_battle
                     if be_stupid_verbose:
-                        print n_id, "exiting beige because of battle ",battle
+                        print nation_id, "exiting because of battle ",battle
                 else:
                     if last_lost_date is not None and battle.time_of_battle - last_lost_date < BEIGE_WAR_TIMEDELTA:
                         last_lost_date = battle.time_of_battle
                         if be_stupid_verbose:
-                            print n_id, "exiting beige because of battle ",battle
+                            print nation_id, "exiting beige because of battle ",battle
                     else:
                         last_lost_date = None # gone past the 5 day limit, start over
                         if be_stupid_verbose:
-                            print n_id, "jk not exiting because of       ",battle
+                            print nation_id, "jk not exiting because of       ",battle
 
         if last_lost_date is not None and self.get_next_turn_in_datetime() - self.get_next_turn_in_datetime(last_lost_date) <= BEIGE_WAR_TIMEDELTA:
+            print "returning now", last_lost_date
+            print BEIGE_WAR_TIMEDELTA
+            print last_lost_date + BEIGE_WAR_TIMEDELTA
             return last_lost_date + BEIGE_WAR_TIMEDELTA
         # wasn't a war that kicked into beige, must be creation date OR NUKE
         #TODO: check nukes, figure out if they have extensions
 
         if self.get_next_turn_in_datetime() - self.get_next_turn_in_datetime(nation.founded_date) <= BEIGE_CREATION_TIMEDELTA:
+            print "returning because new", nation.founded_date
+            print nation.founded_date + BEIGE_CREATION_TIMEDELTA
             return nation.founded_date + BEIGE_CREATION_TIMEDELTA
-        sys.stderr.write(str(WhyIsNationInBeige("ERROR: Nation "+str(n_id)+" shouldn't be in beige...??!?!?")))
+        sys.stderr.write(str(WhyIsNationInBeige("ERROR: Nation "+str(nation_id)+" shouldn't be in beige...??!?!?")))
         sys.stderr.write("Returning very inaccurate time difference!")
         return datetime.datetime.now() + BEIGE_WAR_TIMEDELTA
 
@@ -853,42 +865,91 @@ class PWClient:
 
         return alliance
 
-    def get_alliance_tax_records_from_id(self, alliance_id):
-        """
-        NOT IMPLEMENTED
-        :param alliance_id: number representing an alliance's ID number
-        :return: NONE yet
-        """
-        self._print(2, "Getting alliance from ID:",alliance_id)
+    def get_number_of_members_in_alliance_by_id(self, alliance_id):
+        alliance_name = self.get_alliance_name_from_ID(alliance_id)
+        query_url = self.__root_url + "/index.php?id=15&keyword="+quote_plus(str(alliance_name))+"&cat=alliance"
+        number_of_alliance_members = sum(1 for _ in self._generate_full_query_list(query_url))
+        return number_of_alliance_members
 
+    def get_alliance_tax_records_from_id(self, alliance_id, only_last_turn=False, records_since_datetime=None):
+        """
+
+        :param alliance_id: a number representing an alliance id
+        :param only_last_turn: if you only want to look at tax records from the most recent turn
+        :param records_since_datetime: a date to go back since. Should be game-time biased!
+        :return: list of tax records
+        """
         url = self.__root_url + "/alliance/id="+str(alliance_id)+"&display=banktaxes"
-        nationtable = self._retrieve_nationtable(url)
-        self._generate_full_query_list(url)
+
+        num_records = 100
+
+        if records_since_datetime is not None:
+            # estimate how many records we'll need
+            now = self.get_current_date_in_datetime()
+            diff =  now - records_since_datetime
+            hours = diff.total_seconds() / (60 * 60)
+            turns = hours / 2
+
+            num_records = turns * (self.get_number_of_members_in_alliance_by_id(alliance_id) + 10) # give a big margin of error, because it doesn't cost anything
+            self._print(3, "searching for records since ",records_since_datetime," which was ",hours, "hours ago and",turns," turns ago ->",num_records, "records to fetch")
+
 
         records = []
 
-        for tr in nationtable.findall(".//tr"):
-            tax_record = {}
-            if tr[1].text == "Date":
-                continue
-            transaction_date = tr[1].text
-            tax_record["sender"] = nation_id = _get_param_from_url( tr[1][1][0].attrib['href'], "id" )
-            tax_record["date"] = transaction_date
-            tax_record["money"] = float(tr[1][3].text.strip().replace("$","").replace(",",""))
-            tax_record["food"] = float(tr[1][4].text.strip().replace("$","").replace(",",""))
-            tax_record["coal"] = float(tr[1][5].text.strip().replace("$","").replace(",",""))
-            tax_record["oil"] = float(tr[1][6].text.strip().replace("$","").replace(",",""))
-            tax_record["uranium"] = float(tr[1][7].text.strip().replace("$","").replace(",",""))
-            tax_record["lead"] = float(tr[1][8].text.strip().replace("$","").replace(",",""))
-            tax_record["iron"] = float(tr[1][9].text.strip().replace("$","").replace(",",""))
-            tax_record["bauxite"] = float(tr[1][10].text.strip().replace("$","").replace(",",""))
-            tax_record["gasoline"] = float(tr[1][11].text.strip().replace("$","").replace(",",""))
-            tax_record["munition"] = float(tr[1][12].text.strip().replace("$","").replace(",",""))
-            tax_record["steel"] = float(tr[1][13].text.strip().replace("$","").replace(",",""))
-            tax_record["aluminum"] = float(tr[1][14].text.strip().replace("$","").replace(",",""))
-            print transaction_date, tax_record
-            records.append(tax_record)
-        pass
+        window_start = 0
+        max_window = 100
+
+        if only_last_turn:
+            num_records = self.get_number_of_members_in_alliance_by_id(alliance_id)
+            max_window = min(max_window, num_records)
+
+        records_left = num_records
+
+        while records_left > 0:
+            self._print(1, "Retrieving nationtable for:",url)
+            r,content = self.__make_http_request(url, body={'maximum': max_window, 'minimum':window_start}, request_type='POST')
+            parser = ET.XMLParser(recover=True)
+            tree = ET.fromstring(content, parser=parser)
+            nationtables = tree.findall(".//table[@class='nationtable']")
+            nationtable = nationtables[0]
+
+            records_left -= max_window
+            window_start += max_window
+
+            for tr in nationtable.findall(".//tr"):
+                tax_record = {}
+                if tr[1].text == "Date":
+                    continue
+                transaction_date_str = tr[1].text
+                transaction_date = datetime.datetime.strptime(transaction_date_str.strip(), "%m/%d/%Y %I:%M %p")
+                try:
+                    tax_record["sender"] = nation_id = _get_param_from_url( tr[1][1][0].attrib['href'], "id" )
+                except IndexError:
+                    print len(tr)
+                    print len(tr[1][1])
+                    print tr[1][1].text
+                    print stringify_children(tr[1][0])
+                    tax_record["sender"] = nation_id = _get_param_from_url( tr[2][0].attrib['href'], "id" )
+                tax_record["date"] = transaction_date
+                tax_record['resources'] = {}
+                tax_record['resources']["money"] = float(tr[1][3].text.strip().replace("$","").replace(",",""))
+                tax_record['resources']["food"] = float(tr[1][4].text.strip().replace("$","").replace(",",""))
+                tax_record['resources']["coal"] = float(tr[1][5].text.strip().replace("$","").replace(",",""))
+                tax_record['resources']["oil"] = float(tr[1][6].text.strip().replace("$","").replace(",",""))
+                tax_record['resources']["uranium"] = float(tr[1][7].text.strip().replace("$","").replace(",",""))
+                tax_record['resources']["lead"] = float(tr[1][8].text.strip().replace("$","").replace(",",""))
+                tax_record['resources']["iron"] = float(tr[1][9].text.strip().replace("$","").replace(",",""))
+                tax_record['resources']["bauxite"] = float(tr[1][10].text.strip().replace("$","").replace(",",""))
+                tax_record['resources']["gasoline"] = float(tr[1][11].text.strip().replace("$","").replace(",",""))
+                tax_record['resources']["munition"] = float(tr[1][12].text.strip().replace("$","").replace(",",""))
+                tax_record['resources']["steel"] = float(tr[1][13].text.strip().replace("$","").replace(",",""))
+                tax_record['resources']["aluminum"] = float(tr[1][14].text.strip().replace("$","").replace(",",""))
+                if records_since_datetime is not None and transaction_date < records_since_datetime:
+                    return records # we already went too far, stop and return
+                records.append(tax_record)
+            # if only_last_turn:
+                # records = records[:num_records]
+        return records
 
     def get_wars(self, nation_id):
 
@@ -918,6 +979,34 @@ class PWClient:
         sorted_battles.sort(key=lambda b:b.time_of_battle)
 
         return sorted_battles
+
+    def make_bank_withdrawal(self, recipient_id, money=0, food=0, coal=0, oil=0, uranium=0, lead=0, iron=0, bauxite=0,
+                             gasoline=0, munitions=0, steel=0, aluminum=0):
+
+        # don't give money to non-cf's
+        alliance_members = self.get_list_of_alliance_members_from_ID(1356)
+        assert str(recipient_id) in [str(alliance_member.nation_id) for alliance_member in alliance_members]
+
+        recipient_name = self.get_nation_name_from_id(recipient_id)
+        body_data = {
+            'withmoney': money,
+            'withfood': food,
+            'withcoal': coal,
+            'withoil': oil,
+            'withuranium': uranium,
+            'withlead': lead,
+            'withiron': iron,
+            'withbauxite': bauxite,
+            'withgasoline': gasoline,
+            'withmunitions': munitions,
+            'withsteel': steel,
+            'withaluminum': aluminum,
+            'withtype': 'Nation',
+            'withrecipient': recipient_name,
+            'withnote': 'Automated FALCON withdrawal, ticket no: '+str(0),  # TODO: add a ticket number
+            'withsubmit': 'Withdraw'
+        }
+        self.__make_http_request(self.__root_url + "/alliance/id=1356&display=bank", body=body_data, request_type='POST')
 
 
 if __name__ == "__main__":
