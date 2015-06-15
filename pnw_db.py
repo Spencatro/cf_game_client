@@ -59,7 +59,7 @@ class PWDB:
                                         owed_key: {},
                                         total_paid_key: {}}).inserted_id
 
-    def get_nation(self, nation_id, or_create = True):
+    def get_nation(self, nation_id, or_create=True):
         result = self.nations.find_one({'nation_id':nation_id})
         if or_create:
             if result is None:

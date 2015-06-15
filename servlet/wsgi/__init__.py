@@ -87,7 +87,7 @@ def make_request():
     if request.method == 'POST':
         nation_id = request.form['nid']
         reqbot = RequestBot()
-        results = reqbot.make_request(int(nation_id))
+        results = reqbot.make_request(str(nation_id))
 
         renderstring = "Request accepted!<br />"
         for key in results.keys():

@@ -484,6 +484,7 @@ class PWClient:
         :return: str nation_name
         :rtype str
         """
+        nation_id = int(nation_id)
         if nation_id in self.nation_cache.keys():
             return self.nation_cache[nation_id].name
         n = self.get_nation_obj_from_ID(nation_id)
@@ -983,9 +984,11 @@ class PWClient:
     def make_bank_withdrawal(self, recipient_id, money=0, food=0, coal=0, oil=0, uranium=0, lead=0, iron=0, bauxite=0,
                              gasoline=0, munitions=0, steel=0, aluminum=0):
 
+        recipient_id = str(recipient_id)
+
         # don't give money to non-cf's
         alliance_members = self.get_list_of_alliance_members_from_ID(1356)
-        assert str(recipient_id) in [str(alliance_member.nation_id) for alliance_member in alliance_members]
+        assert recipient_id in [str(alliance_member.nation_id) for alliance_member in alliance_members]
 
         recipient_name = self.get_nation_name_from_id(recipient_id)
         body_data = {
