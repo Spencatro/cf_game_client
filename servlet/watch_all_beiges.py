@@ -4,7 +4,7 @@ sys.path.append('/root/politicsandwar/pnw_stats_finder/servlet/mlibs') # for non
 
 from gmail.message import Message
 from gmail.gmail import GMail
-from PWClient import PWClient, Nation, WhyIsNationInBeige, NationDoesNotExistError
+from pw_client import PWClient, Nation, WhyIsNationInBeige, NationDoesNotExistError
 import base64
 import lxml.etree as ETree
 import logging
@@ -40,7 +40,7 @@ def create_html_table(nations, next_turn):
         assert isinstance(nation, Nation)
         mil_percent = nation.military.get_score() / float(nation.score)
         name = nation.name
-        link = "https://politicsandwar.com/nation/id="+str(nation.n_id)
+        link = "https://politicsandwar.com/nation/id="+str(nation.nation_id)
         tr = ETree.Element("tr")
         name_td = ETree.Element("td")
         name_td.text = name
@@ -85,18 +85,18 @@ beiges_to_expire = []
 
 for beige in pwc.generate_all_nations_with_color('beige'):
     try:
-        time_to_beige_exit = pwc.get_next_turn_in_datetime(pwc.calculate_beige_exit_time(beige.n_id))- pwc.get_current_date_in_datetime()
+        time_to_beige_exit = pwc.get_next_turn_in_datetime(pwc.calculate_beige_exit_time(beige.nation_id))- pwc.get_current_date_in_datetime()
         if time_to_beige_exit <= datetime.timedelta(hours=2, minutes=30):
             beiges_to_expire.append(beige)
             logger.info("")
-            logger.info(str(beige.n_id) + " "+ str(beige.color) + " to expire in "+str(time_to_beige_exit))
+            logger.info(str(beige.nation_id) + " "+ str(beige.color) + " to expire in "+str(time_to_beige_exit))
             logger.info("")
         else :
-            print beige.n_id,",",
+            print beige.nation_id,",",
     except WhyIsNationInBeige:
-        logger.info("\nshit this nation is in beige, why?? " + str(beige.n_id))
+        logger.info("\nshit this nation is in beige, why?? " + str(beige.nation_id))
     except NationDoesNotExistError:
-        logger.info( "\nshit this nation doesn't exist wat " + str(beige.n_id))
+        logger.info( "\nshit this nation doesn't exist wat " + str(beige.nation_id))
 
 filepath = "/root/politicsandwar/pnw_stats_finder/servlet/recipients.txt"
 

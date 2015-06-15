@@ -9,10 +9,10 @@ import sys
 import os
 sys.path.append("/var/www/falcon/pnw_stats_finder")
 sys.path.append("/var/www/falcon/pnw_stats_finder/servlet/mlibs")
-import PWClient
 from gmail.message import Message
 from gmail.gmail import GMail
-from PWClient import PWClient
+from pw_client import PWClient
+from falcon.request_bot import RequestBot
 
 import logging
 logger = logging.getLogger("notification_queuer")
@@ -75,12 +75,25 @@ minute_ticker = MinuteTicker()
 t = Thread(target=minute_ticker.on_minute_do)
 t.start()
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 app = Flask(__name__)
 
 @app.route('/')
 def hello_world():
     return render_template('homeform.html')
+
+@app.route('/request/', methods=['POST'])
+def make_request():
+    if request.method == 'POST':
+        nation_id = request.form['nid']
+        reqbot = RequestBot()
+        results = reqbot.make_request(int(nation_id))
+
+        renderstring = "Request accepted!<br />"
+        for key in results.keys():
+            renderstring += key+" returned: "+results[key]+"<br />"
+
+        return renderstring
 
 @app.route('/queue_n/<to>/<subject>/<body>/<time>/')
 def queue_n(to, subject, body, time):

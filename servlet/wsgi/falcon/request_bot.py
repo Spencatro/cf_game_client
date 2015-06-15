@@ -1,4 +1,4 @@
-from falcon.income_tracker import owed_key, collected_key
+from servlet.wsgi.falcon.income_tracker import owed_key, collected_key
 from pnw_db import PWDB
 
 __author__ = 'sxh112430'

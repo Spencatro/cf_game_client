@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-import PWClient
+import pw_client
 
 __author__ = 'sxh112430'
 
@@ -12,7 +12,7 @@ sys.path.append('mlibs') # for non-ide usage
 
 from gmail.message import Message
 from gmail.gmail import GMail
-from PWClient import PWClient
+from pw_client import PWClient
 
 import logging
 logger = logging.getLogger("notification_queuer")
