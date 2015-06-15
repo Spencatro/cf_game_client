@@ -82,7 +82,7 @@ class PWDB:
 
     def increase_graph_counter(self):
         gcount = self.graph_counter.find_one()
-        prev_num = gcount['graph_counter']
-        gcount['graph_counter'] += 1
-        self.graph_counter.update({'graph_counter':prev_num}, {"$set":gcount})
+        prev_num = gcount['graph_count']
+        gcount['graph_count'] += 1
+        self.graph_counter.update({'graph_count':prev_num}, {"$set":gcount})
         return prev_num + 1
