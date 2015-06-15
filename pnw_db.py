@@ -54,17 +54,17 @@ class PWDB:
     def make_nation(self, nation_id):
         if self.nation_exists(nation_id):
             return False
-        return self.nations.insert_one({'nation_id': nation_id,
+        return self.nations.insert_one({'nation_id': str(nation_id),
                                         collected_key: self.pwc.get_current_date_in_datetime(),
                                         owed_key: {},
                                         total_paid_key: {}}).inserted_id
 
     def get_nation(self, nation_id, or_create=True):
-        result = self.nations.find_one({'nation_id':nation_id})
+        result = self.nations.find_one({'nation_id':str(nation_id)})
         if or_create:
             if result is None:
-                self.make_nation(nation_id)  # Stick it in the DB
-                result = self.get_nation(nation_id)  # lol, try again
+                self.make_nation(str(nation_id))  # Stick it in the DB
+                result = self.get_nation(str(nation_id))  # lol, try again
         return result
 
     def list_members(self):
