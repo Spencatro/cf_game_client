@@ -32,6 +32,9 @@ class PWDB:
         self.nations = self.tax_db.nations
         assert isinstance(self.nations, Collection)
 
+        self.graph_counter = self.tax_db.graph_counter
+        assert isinstance(self.nations, Collection)
+
     def nation_exists(self, nation_id):
         result = self.nations.find({'nation_id':nation_id})
         count = result.count()
@@ -68,3 +71,10 @@ class PWDB:
 
     def set_nation(self, nation_id, nation_dict):
         self.nations.update({'nation_id':nation_id}, {"$set":nation_dict}, upsert=True)
+
+    def increase_graph_counter(self):
+        gcount = self.graph_counter.find_one()
+        prev_num = gcount['graph_counter']
+        gcount['graph_counter'] += 1
+        self.graph_counter.update({'graph_counter':prev_num}, {"$set":gcount})
+        return prev_num + 1

@@ -146,6 +146,3 @@ class IncomeTracker:
             print "==?"
             print total_retained_this_turn[key] + total_collected_this_turn[key]
             print ACTUAL_TOTAL[key]
-
-
-

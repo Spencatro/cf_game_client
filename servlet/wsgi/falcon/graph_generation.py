@@ -50,9 +50,5 @@ class Grapher:
             else:
                 xy_plot.add(key+" paid", paid_list[key])
                 xy_plot.add(key+" return", owed_list[key])
-        xy_plot.render_to_file('score_v_rsc.svg')
-
-
-ic = IncomeTracker()
-g = Grapher()
-g.score_vs_resources(1356)
+        count = self.pwdb.increase_graph_counter()
+        xy_plot.render_to_file('score_v_rsc_'+str(count)+'.svg')

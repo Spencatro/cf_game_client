@@ -35,6 +35,3 @@ class RequestBot:
 
         return nation_tax_db[owed_key]
 
-r = RequestBot()
-result = r.make_request(17270)
-
