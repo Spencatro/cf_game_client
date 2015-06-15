@@ -1,5 +1,5 @@
-from servlet.wsgi.falcon.graph_generation import Grapher
-from servlet.wsgi.falcon.income_tracker import IncomeTracker
+from graph_generation import Grapher
+from income_tracker import IncomeTracker
 
 __author__ = 'sxh112430'
 
