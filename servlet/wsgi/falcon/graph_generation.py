@@ -2,7 +2,6 @@ import os
 
 import pygal
 
-from servlet.wsgi.falcon.income_tracker import IncomeTracker
 from pnw_db import owed_key, total_paid_key
 from pnw_db import PWDB
 from pw_client import Nation
