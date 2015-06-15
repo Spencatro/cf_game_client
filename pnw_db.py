@@ -17,10 +17,18 @@ score_diff_key = 'score_diff'
 
 class PWDB:
     def __init__(self, username=None, password=None):
+
+        if 'PWUSER' in os.environ:
+            USERNAME = os.environ['PWUSER']
+            PASS = os.environ['PWPASS']
+        else:
+            with open("/var/www/falcon/auth") as uf:
+                USERNAME = uf.readline().strip()
+                PASS = uf.readline().strip()
         if username is None:
-            username = os.environ['PWUSER']
+            username = USERNAME
         if password is None:
-            password = os.environ['PWPASS']
+            password = PASS
 
         self.pwc = PWClient(username, password)
 

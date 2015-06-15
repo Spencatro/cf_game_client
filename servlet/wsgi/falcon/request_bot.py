@@ -6,8 +6,15 @@ import os
 
 class RequestBot:
     def __init__(self):
-        __username = os.environ['PWUSER']
-        __pass = os.environ['PWPASS']
+        if 'PWUSER' in os.environ:
+            USERNAME = os.environ['PWUSER']
+            PASS = os.environ['PWPASS']
+        else:
+            with open("/var/www/falcon/auth") as uf:
+                USERNAME = uf.readline().strip()
+                PASS = uf.readline().strip()
+        __username = USERNAME
+        __pass = PASS
         self.pwdb = PWDB(__username, __pass)
         self.pwc = self.pwdb.pwc
 
