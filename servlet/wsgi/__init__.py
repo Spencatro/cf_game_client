@@ -106,7 +106,7 @@ def make_request():
             avg_money_per_turn = results[owed_key]["money"] / float(num_turns)
 
         renderstring += "money returned: "+str(results[owed_key]["money"])+" (average of " +\
-                        str(avg_money_per_turn)+" per turn)<br /><br />"
+                        str(avg_money_per_turn)+" per turn and "+str(avg_money_per_turn * 12)+" per day)<br /><br />"
         
         for key in results[owed_key].keys():
             if key != "money":
@@ -114,7 +114,7 @@ def make_request():
                 if num_turns >= 1:
                     avg = results[owed_key][key] / float(num_turns)
                 renderstring += key+" returned: "+str(results[owed_key][key])+"  (average of " +\
-                                str(avg)+" per turn)<br />"
+                                str(avg)+" per turn and "+str(avg * 12)+" per day)<br />"
 
         return renderstring
 
