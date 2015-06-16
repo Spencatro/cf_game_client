@@ -57,8 +57,8 @@ class RequestBot:
         self.pwdb.set_nation(nation_id, nation_tax_db)
 
         self.pwdb._init_pwc()
-        
-        self.pwc.make_bank_withdrawal(nation_id, money=money_owed, food=food_owed, coal=coal_owed, uranium=uranium_owed,
+
+        self.pwdb.pwc.make_bank_withdrawal(nation_id, money=money_owed, food=food_owed, coal=coal_owed, uranium=uranium_owed,
                                       oil=oil_owed, lead=lead_owed, iron=iron_owed, bauxite=bauxite_owed,
                                       gasoline=gasoline_owed, munitions=munitions_owed, steel=steel_owed,
                                       aluminum=aluminum_owed)
