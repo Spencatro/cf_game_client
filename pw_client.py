@@ -1014,7 +1014,7 @@ class PWClient:
             'withaluminum': aluminum,
             'withtype': 'Nation',
             'withrecipient': recipient_name,
-            'withnote': 'Automated FALCON withdrawal, ticket no: '+str(0),  # TODO: add a ticket number
+            'withnote': 'FALCON n'+str(0),
             'withsubmit': 'Withdraw'
         }
         self.__make_http_request(self.__root_url + "/alliance/id=1356&display=bank", body=body_data, request_type='POST')
