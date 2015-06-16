@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from pnw_db import PWDB
+from pnw_db import PWDB, turns_since_collected_key
 from pw_client import PWClient, DEBUG_LEVEL_MEGA_VERBOSE, DEBUG_LEVEL_STFU
 import os
 from pnw_db import rsc_key, score_diff_key, collected_key, can_collect_key, total_paid_key, owed_key
@@ -103,6 +103,7 @@ class IncomeTracker:
                     nation_tax_db[owed_key][resource_type] += amount_sent - amount_collected
                     total_retained_this_turn[resource_type] += amount_sent - amount_collected
 
+            nation_tax_db[turns_since_collected_key] += 1
             pwdb.set_nation(nation_id, nation_tax_db)
 
         # Determine who is still owed from reserves

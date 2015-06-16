@@ -1,5 +1,5 @@
 from income_tracker import owed_key, collected_key
-from pnw_db import PWDB
+from pnw_db import PWDB, turns_since_collected_key
 import copy
 
 __author__ = 'sxh112430'
@@ -56,6 +56,7 @@ class RequestBot:
         nation_tax_db[owed_key]['aluminum'] = 0
 
         nation_tax_db[collected_key] = self.pwc.get_current_date_in_datetime()
+        nation_tax_db[turns_since_collected_key] = 0
 
         self.pwdb.set_nation(nation_id, nation_tax_db)
 
