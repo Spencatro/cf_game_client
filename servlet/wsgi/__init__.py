@@ -1,15 +1,15 @@
 from datetime import datetime, timedelta
-from pnw_db import PWDB, owed_key, turns_since_collected_key
 
 __author__ = 'sxh112430'
 
+import sys
+sys.path.append("/var/www/falcon/pnw_stats_finder")
+sys.path.append("/var/www/falcon/pnw_stats_finder/servlet/mlibs")
 from threading import Thread
 import time
 import base64
-import sys
 import os
-sys.path.append("/var/www/falcon/pnw_stats_finder")
-sys.path.append("/var/www/falcon/pnw_stats_finder/servlet/mlibs")
+from pnw_db import PWDB, owed_key, turns_since_collected_key
 from gmail.message import Message
 from gmail.gmail import GMail
 from pw_client import PWClient
