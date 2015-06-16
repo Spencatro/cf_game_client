@@ -45,11 +45,11 @@ class PWDB:
                 USERNAME = uf.readline().strip()
                 PASS = uf.readline().strip()
         if self.__username is None:
-            username = USERNAME
+            self.__username = USERNAME
         if self.__password is None:
-            password = PASS
+            self.__password = PASS
 
-        self.pwc = PWClient(username, password)
+        self.pwc = PWClient(self.__username, self.__password)
 
 
     def nation_exists(self, nation_id):
