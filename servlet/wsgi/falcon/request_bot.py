@@ -37,7 +37,8 @@ class RequestBot:
         steel_owed =        nation_tax_db[owed_key]['steel']
         aluminum_owed =     nation_tax_db[owed_key]['aluminum']
 
-        result = copy.copy(nation_tax_db)
+        result = copy.deepcopy(nation_tax_db)
+
         nation_tax_db[owed_key]['money'] =    0
         nation_tax_db[owed_key]['food'] =     0
         nation_tax_db[owed_key]['coal'] =     0
