@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from pnw_db import PWDB, owed_key, turns_since_collected_key
 
 __author__ = 'sxh112430'
 
@@ -92,14 +93,28 @@ def make_request():
         nation_id = request.form['nid']
         reqbot = RequestBot()
         results = reqbot.make_request(str(nation_id))
+        renderstring = ""
+        num_turns = results[turns_since_collected_key]
+        if num_turns < 1:
+            renderstring += "Request rejected: it has not been a turn since your last request!"
+        else:
+            renderstring += "Request accepted! it has been "+str(num_turns) +\
+                            "turns since your last collection. <br />"
 
-        renderstring = "Request accepted!<br />"
+        avg_money_per_turn = 0
+        if num_turns >= 1:
+            avg_money_per_turn = results[owed_key]["money"] / float(num_turns)
+
+        renderstring += "money returned: "+str(results[owed_key]["money"])+" (average of " +\
+                        str(avg_money_per_turn)+" per turn)<br /><br />"
         
-        renderstring += "money returned: "+str(results["money"])+"<br /><br />"
-        
-        for key in results.keys():
+        for key in results[owed_key].keys():
             if key != "money":
-                renderstring += key+" returned: "+str(results[key])+"<br />"
+                avg = 0
+                if num_turns >= 1:
+                    avg = results[owed_key][key] / float(num_turns)
+                renderstring += key+" returned: "+str(results[owed_key][key])+"  (average of " +\
+                                str(avg)+" per turn)<br />"
 
         return renderstring
 
