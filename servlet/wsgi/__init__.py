@@ -85,7 +85,21 @@ def hello_world():
 
 @app.route('/available/')
 def available():
-    pass
+    pwdb = PWDB()
+    collections = pwdb.tax_db.nations
+
+    all_owed = {}
+    for n in collections.find():
+        for key in n[owed_key]:
+            if key not in all_owed:
+                all_owed[key] = 0
+            all_owed[key] += n[owed_key][key]
+    renderstring = "<h1>Minimum reserves required</h1><h2>Do not leave" \
+                   "the bank with less than the following amounts at <b>any time</b></h2><br >"
+    for key in all_owed:
+        renderstring += "Minimum "+key+": {:+.4f} <br />".format(all_owed[key])
+
+    return renderstring
 
 @app.route('/request/', methods=['POST'])
 def make_request():
@@ -116,7 +130,7 @@ def make_request():
                 avg = 0
                 if num_turns >= 1:
                     avg = results[owed_key][key] / float(num_turns)
-                renderstring += key+"returned: <b>{:+.2f}</b> (average of {:+.2f} per turn and <b>{:+.2f}</b> per day)<br /><br />".format(
+                renderstring += key+" returned: <b>{:+.2f}</b> (average of {:+.2f} per turn and <b>{:+.2f}</b> per day)<br /><br />".format(
                 results[owed_key][key], avg, avg * 12)
 
         return renderstring
