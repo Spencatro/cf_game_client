@@ -94,10 +94,13 @@ def available():
             if key not in all_owed:
                 all_owed[key] = 0
             all_owed[key] += n[owed_key][key]
-    renderstring = "<h1>Minimum reserves required</h1><h2>Do not leave" \
-                   "the bank with less than the following amounts at <b>any time</b></h2><br >"
+    renderstring = "<h1>Minimum reserves required</h1><br />Do not leave " \
+                   "the bank with less than the following amounts at <b>any time</b><br >"
+
+    renderstring += "Minimum money: {:+.4f} <br />".format(all_owed["money"])
     for key in all_owed:
-        renderstring += "Minimum "+key+": {:+.4f} <br />".format(all_owed[key])
+        if key != "money":
+            renderstring += "Minimum "+key+": {:+.4f} <br />".format(all_owed[key])
 
     return renderstring
 
