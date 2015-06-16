@@ -17,21 +17,13 @@ can_collect_key = 'can_collect'
 score_diff_key = 'score_diff'
 
 class PWDB:
-    def __init__(self, username=None, password=None):
+    def __init__(self, username=None, password=None, skip_pwclient=False):
+        self.pwc = None
+        self.__username = username
+        self.__password = password
 
-        if 'PWUSER' in os.environ:
-            USERNAME = os.environ['PWUSER']
-            PASS = os.environ['PWPASS']
-        else:
-            with open("/var/www/falcon/auth") as uf:
-                USERNAME = uf.readline().strip()
-                PASS = uf.readline().strip()
-        if username is None:
-            username = USERNAME
-        if password is None:
-            password = PASS
-
-        self.pwc = PWClient(username, password)
+        if not skip_pwclient:
+            self._init_pwc()
 
         self.mongo_client = MongoClient()
 
@@ -43,6 +35,22 @@ class PWDB:
 
         self.graph_counter = self.tax_db.graph_counter
         assert isinstance(self.nations, Collection)
+
+    def _init_pwc(self):
+        if 'PWUSER' in os.environ:
+            USERNAME = os.environ['PWUSER']
+            PASS = os.environ['PWPASS']
+        else:
+            with open("/var/www/falcon/auth") as uf:
+                USERNAME = uf.readline().strip()
+                PASS = uf.readline().strip()
+        if self.__username is None:
+            username = USERNAME
+        if self.__password is None:
+            password = PASS
+
+        self.pwc = PWClient(username, password)
+
 
     def nation_exists(self, nation_id):
         result = self.nations.find({'nation_id':nation_id})
