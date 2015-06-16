@@ -13,6 +13,6 @@ for nid in pwdb.list_members():
     if type(nid) == int:
         pwdb.nations.remove(ndb)
     else:
-        ndb[turns_since_collected_key] = math.ceil(pwc.count_turns_since(ndb[collected_key]))
+        ndb[turns_since_collected_key] = math.floor(pwc.count_turns_since(ndb[collected_key]))
         pwdb.set_nation(nid, ndb)
 
