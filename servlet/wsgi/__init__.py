@@ -96,25 +96,28 @@ def make_request():
         renderstring = ""
         num_turns = results[turns_since_collected_key]
         if num_turns < 1:
-            renderstring += "Request rejected: it has not been a turn since your last request! <br />"
+            renderstring += "<h1>Request rejected</h1> <h2>It has not been a turn since your last request!</h2><br />"
         else:
-            renderstring += "Request accepted! it has been "+str(num_turns) +\
-                            "turns since your last collection. <br />"
+            renderstring += "<h1>Request accepted!</h1><h2>It has been "+str(num_turns) +\
+                            " turns since your last collection.</h2><br />"
 
         avg_money_per_turn = 0
         if num_turns >= 1:
             avg_money_per_turn = results[owed_key]["money"] / float(num_turns)
 
-        renderstring += "money returned: "+str(results[owed_key]["money"])+" (average of " +\
-                        str(avg_money_per_turn)+" per turn and "+str(avg_money_per_turn * 12)+" per day)<br /><br />"
-        
+        # renderstring += "money returned: "+str(results[owed_key]["money"])+" (average of " +\
+        #                 str(avg_money_per_turn)+" per turn and "+str(avg_money_per_turn * 12)+" per day)<br /><br />"
+        #
+        renderstring += "money returned: <b>{:+.2f}</b> (average of {:+.2f} per turn and <b>{:+.2f}</b> per day)<br /><br />".format(
+                results[owed_key]["money"], avg_money_per_turn, avg_money_per_turn * 12)
+
         for key in results[owed_key].keys():
             if key != "money":
                 avg = 0
                 if num_turns >= 1:
                     avg = results[owed_key][key] / float(num_turns)
-                renderstring += key+" returned: "+str(results[owed_key][key])+"  (average of " +\
-                                str(avg)+" per turn and "+str(avg * 12)+" per day)<br />"
+                renderstring += key+"returned: <b>{:+.2f}</b> (average of {:+.2f} per turn and <b>{:+.2f}</b> per day)<br /><br />".format(
+                results[owed_key][key], avg, avg * 12)
 
         return renderstring
 
