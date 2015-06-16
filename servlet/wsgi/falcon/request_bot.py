@@ -20,7 +20,7 @@ class RequestBot:
         self.pwc = self.pwdb.pwc
 
     def make_request(self, nation_id):
-        nation_id = str(nation_id)
+        nation_id = str(nation_id).strip()
         nation_tax_db = self.pwdb.get_nation(nation_id)
 
         money_owed =        nation_tax_db[owed_key]['money']
