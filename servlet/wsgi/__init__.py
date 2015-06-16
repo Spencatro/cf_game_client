@@ -82,6 +82,10 @@ app = Flask(__name__)
 def hello_world():
     return render_template('homeform.html')
 
+@app.route('/available/')
+def available():
+    pass
+
 @app.route('/request/', methods=['POST'])
 def make_request():
     if request.method == 'POST':
@@ -90,8 +94,12 @@ def make_request():
         results = reqbot.make_request(str(nation_id))
 
         renderstring = "Request accepted!<br />"
+        
+        renderstring += "money returned: "+str(results["money"])+"<br /><br />"
+        
         for key in results.keys():
-            renderstring += key+" returned: "+str(results[key])+"<br />"
+            if key != "money":
+                renderstring += key+" returned: "+str(results[key])+"<br />"
 
         return renderstring
 
