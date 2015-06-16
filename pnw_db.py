@@ -10,6 +10,7 @@ import os
 
 rsc_key = 'resources'
 collected_key = 'last_collected_date'
+turns_since_collected_key = 'turns_since_collected'
 owed_key = 'resources_owed'
 total_paid_key = 'resources_paid'
 can_collect_key = 'can_collect'

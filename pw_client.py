@@ -395,6 +395,14 @@ class PWClient:
         raise Exception("Unimplemented, sry")
         pass
 
+    def count_turns_since(self, date):
+        now = self.get_current_date_in_datetime()
+        time_diff = now - date
+        assert isinstance(time_diff, timedelta)
+        hours = (time_diff.total_seconds() / 60) / 60
+        turns = hours/2
+        return turns
+
     def get_list_of_alliance_members_from_alliance_name(self, alliance_name):
         """
         Get a list of nations from an alliance name (e.g. "Charming Friends").
