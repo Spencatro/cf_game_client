@@ -96,7 +96,7 @@ def make_request():
         renderstring = ""
         num_turns = results[turns_since_collected_key]
         if num_turns < 1:
-            renderstring += "Request rejected: it has not been a turn since your last request!"
+            renderstring += "Request rejected: it has not been a turn since your last request! <br />"
         else:
             renderstring += "Request accepted! it has been "+str(num_turns) +\
                             "turns since your last collection. <br />"
