@@ -76,7 +76,8 @@ minute_ticker = MinuteTicker()
 t = Thread(target=minute_ticker.on_minute_do)
 t.start()
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -103,6 +104,16 @@ def available():
             renderstring += "Minimum "+key+": {:+.4f} <br />".format(all_owed[key])
 
     return renderstring
+
+@app.route('/list_taxed_members/')
+def list_taxed_members():
+    pwdb = PWDB()
+    list = pwdb.list_members()
+    return jsonify(list=list)
+
+@app.route('/turns_since_collected/<nation_id>/')
+def get_turns_since_collected(nation_id):
+    pass
 
 @app.route('/slackers/')
 def find_slackers():
