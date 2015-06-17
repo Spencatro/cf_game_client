@@ -115,7 +115,7 @@ def list_taxed_members():
 def get_turns_since_collected(nation_id):
     pwdb = PWDB()
     n = pwdb.get_nation(nation_id, or_create=False)
-    return n[turns_since_collected_key]
+    return str(n[turns_since_collected_key])
 
 @app.route('/fancy_slackers/')
 def fancy_slackers():
