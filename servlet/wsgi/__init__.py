@@ -108,19 +108,8 @@ def available():
 @app.route('/list_taxed_members/')
 def list_taxed_members():
     pwdb = PWDB()
-    list = pwdb.list_members()
-    return jsonify(list=list)
-
-@app.route('/turns_since_collected/<nation_id>/')
-def get_turns_since_collected(nation_id):
-    pwdb = PWDB()
-    n = pwdb.get_nation(nation_id, or_create=False)
-    return str(n[turns_since_collected_key])
-
-@app.route('/fancy_slackers/')
-def fancy_slackers():
-    return render_template('slackers.html')
-
+    tlist = pwdb.list_members()
+    return jsonify(tlist=tlist)
 
 @app.route('/slackers/')
 def find_slackers():
@@ -130,20 +119,19 @@ def find_slackers():
 
     all_nations = []
     for nation in nations.find():
-        try:
-            all_nations.append((nation['nation_id'], pwdb.pwc.get_nation_name_from_id(nation['nation_id']), nation[turns_since_collected_key]))
-        except NationDoesNotExistError:
-            pass
+        all_nations.append((nation['nation_id'], nation['name'], nation[turns_since_collected_key]))
 
     all_nations.sort(key=lambda x: x[2], reverse=True)
 
-    renderstring = "<h1>Slackers</h1> <br />"
+    renderstring = "<h1>Slackers!</h1>"
     for ntuple in all_nations:
         color = "#999"
+        if ntuple[2] < 2:
+            color = "#DDD"
         if ntuple[2] > 5:
             color = "#000"
         if ntuple[2] > 10:
-            color = "#B00"
+            color = "#F99"
         if ntuple[2] > 20:
             color = "#F00"
         renderstring += "<p style='color:"+color+";'>Nation "+ntuple[1]+" has not collected in "+str(ntuple[2])+" turns!</p>"
