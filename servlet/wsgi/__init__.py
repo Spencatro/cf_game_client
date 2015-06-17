@@ -104,39 +104,47 @@ def available():
 
     return renderstring
 
+def do_request(nation_id):
+    reqbot = RequestBot()
+    results = reqbot.make_request(str(nation_id))
+    renderstring = ""
+    num_turns = results[turns_since_collected_key]
+    if num_turns < 1:
+        renderstring += "<h1>Request rejected</h1> <h2>It has not been a turn since your last request!</h2><br />"
+    else:
+        renderstring += "<h1>Request accepted!</h1><h2>It has been "+str(num_turns) +\
+                        " turns since your last collection.</h2><br />"
+
+    avg_money_per_turn = 0
+    if num_turns >= 1:
+        avg_money_per_turn = results[owed_key]["money"] / float(num_turns)
+
+    # renderstring += "money returned: "+str(results[owed_key]["money"])+" (average of " +\
+    #                 str(avg_money_per_turn)+" per turn and "+str(avg_money_per_turn * 12)+" per day)<br /><br />"
+    #
+    renderstring += "money returned: <b>{:+.2f}</b> (average of {:+.2f} per turn and <b>{:+.2f}</b> per day)<br /><br />".format(
+            results[owed_key]["money"], avg_money_per_turn, avg_money_per_turn * 12)
+
+    for key in results[owed_key].keys():
+        if key != "money":
+            avg = 0
+            if num_turns >= 1:
+                avg = results[owed_key][key] / float(num_turns)
+            renderstring += key+" returned: <b>{:+.2f}</b> (average of {:+.2f} per turn and <b>{:+.2f}</b> per day)<br /><br />".format(
+            results[owed_key][key], avg, avg * 12)
+
+    return renderstring
+
+@app.route('/request/<nation_id>/')
+def request_with_id(nation_id):
+    return do_request(nation_id)
+
+
 @app.route('/request/', methods=['POST'])
 def make_request():
     if request.method == 'POST':
         nation_id = request.form['nid']
-        reqbot = RequestBot()
-        results = reqbot.make_request(str(nation_id))
-        renderstring = ""
-        num_turns = results[turns_since_collected_key]
-        if num_turns < 1:
-            renderstring += "<h1>Request rejected</h1> <h2>It has not been a turn since your last request!</h2><br />"
-        else:
-            renderstring += "<h1>Request accepted!</h1><h2>It has been "+str(num_turns) +\
-                            " turns since your last collection.</h2><br />"
-
-        avg_money_per_turn = 0
-        if num_turns >= 1:
-            avg_money_per_turn = results[owed_key]["money"] / float(num_turns)
-
-        # renderstring += "money returned: "+str(results[owed_key]["money"])+" (average of " +\
-        #                 str(avg_money_per_turn)+" per turn and "+str(avg_money_per_turn * 12)+" per day)<br /><br />"
-        #
-        renderstring += "money returned: <b>{:+.2f}</b> (average of {:+.2f} per turn and <b>{:+.2f}</b> per day)<br /><br />".format(
-                results[owed_key]["money"], avg_money_per_turn, avg_money_per_turn * 12)
-
-        for key in results[owed_key].keys():
-            if key != "money":
-                avg = 0
-                if num_turns >= 1:
-                    avg = results[owed_key][key] / float(num_turns)
-                renderstring += key+" returned: <b>{:+.2f}</b> (average of {:+.2f} per turn and <b>{:+.2f}</b> per day)<br /><br />".format(
-                results[owed_key][key], avg, avg * 12)
-
-        return renderstring
+        return do_request(nation_id)
 
 @app.route('/queue_n/<to>/<subject>/<body>/<time>/')
 def queue_n(to, subject, body, time):
