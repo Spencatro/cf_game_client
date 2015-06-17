@@ -113,7 +113,12 @@ def list_taxed_members():
 
 @app.route('/turns_since_collected/<nation_id>/')
 def get_turns_since_collected(nation_id):
-    pass
+    return render_template('slackers.html')
+
+@app.route('/fancy_slackers/')
+def fancy_slackers():
+    return render_template('slackers.html')
+
 
 @app.route('/slackers/')
 def find_slackers():
