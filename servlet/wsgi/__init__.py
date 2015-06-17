@@ -113,7 +113,9 @@ def list_taxed_members():
 
 @app.route('/turns_since_collected/<nation_id>/')
 def get_turns_since_collected(nation_id):
-    return render_template('slackers.html')
+    pwdb = PWDB()
+    n = pwdb.get_nation(nation_id, or_create=False)
+    return n[turns_since_collected_key]
 
 @app.route('/fancy_slackers/')
 def fancy_slackers():
