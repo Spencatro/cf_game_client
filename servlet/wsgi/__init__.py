@@ -12,7 +12,7 @@ import os
 from pnw_db import PWDB, owed_key, turns_since_collected_key
 from gmail.message import Message
 from gmail.gmail import GMail
-from pw_client import PWClient
+from pw_client import PWClient, NationDoesNotExistError
 from falcon.request_bot import RequestBot
 
 import logging
@@ -103,6 +103,40 @@ def available():
             renderstring += "Minimum "+key+": {:+.4f} <br />".format(all_owed[key])
 
     return renderstring
+
+@app.route('/slackers/')
+def find_slackers():
+
+    pwdb = PWDB()
+    pwc = pwdb.pwc
+    assert isinstance(pwc, PWClient)
+
+    pwc.get_nation_name_from_id()
+
+    nations = pwdb.tax_db.nations
+
+    all_nations = []
+    for nation in nations.find():
+        try:
+            all_nations.append((nation['nation_id'], pwc.get_nation_name_from_id(nation['nation_id']), nation[turns_since_collected_key]))
+        except NationDoesNotExistError:
+            pass
+
+    all_nations.sort(key=lambda x: x[2], reverse=True)
+
+    renderstring = "<h1>Slackers</h1> <br />"
+    for ntuple in all_nations:
+        color = "#999"
+        if ntuple[2] > 5:
+            color = "#000"
+        if ntuple[2] > 10:
+            color = "#B00"
+        if ntuple[2] > 20:
+            color = "#F00"
+        renderstring += "<p style='color:"+color+";'>Nation "+ntuple[1]+" has not collected in "+str(ntuple[2])+" turns!</p>"
+
+    return renderstring
+
 
 def do_request(nation_id):
     reqbot = RequestBot()
