@@ -108,17 +108,12 @@ def available():
 def find_slackers():
 
     pwdb = PWDB()
-    pwc = pwdb.pwc
-    assert isinstance(pwc, PWClient)
-
-    pwc.get_nation_name_from_id()
-
     nations = pwdb.tax_db.nations
 
     all_nations = []
     for nation in nations.find():
         try:
-            all_nations.append((nation['nation_id'], pwc.get_nation_name_from_id(nation['nation_id']), nation[turns_since_collected_key]))
+            all_nations.append((nation['nation_id'], pwdb.pwc.get_nation_name_from_id(nation['nation_id']), nation[turns_since_collected_key]))
         except NationDoesNotExistError:
             pass
 
