@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from servlet.settings import MAINTENANCE_MODE
 
 __author__ = 'sxh112430'
 
@@ -33,59 +34,20 @@ else:
         PASS = uf.readline().strip()
 pwc = PWClient(USERNAME, PASS)
 
-class MinuteTicker:
-    def __init__(self):
-        self.abort = False
-        self.beige_watches = {}
-    def on_minute_do(self):
-        while not self.abort:
-            try:
-                now = datetime.now()
-                seconds_til_next_minute = 65 - now.second # go on :05 of each minute
-                logger.debug("waiting "+str(seconds_til_next_minute)+" seconds")
-                time.sleep(seconds_til_next_minute)
-
-                # now do stuff
-                pnw_time = pwc.get_current_date_in_datetime()
-
-                removal_list = []
-                try:
-                    for key in self.beige_watches.keys():
-                        nation = pwc.get_nation_obj_from_ID(key, skip_cache=True)
-                        if nation.color != "Beige":
-                            for recipient in self.beige_watches[key]:
-                                try:
-                                    send_email(recipient, "Nation "+str(key)+" has left beige!", "Warning! A nation on your watchlist has left beige! Link to nation: http://politicsandwar.com/nation/id="+str(key))
-                                except Exception as e:
-                                    logger.error(e)
-                                    print e
-                                finally:
-                                    if key not in removal_list:
-                                        removal_list.append(key)
-                        else: # nation is still biege, run calc
-                            pwc.calculate_beige_exit_time()
-                            pass
-                finally:
-                    for to_remove in removal_list:
-                        del self.beige_watches[to_remove]
-            except Exception as e:
-                logger.error(e)
-                print e
-
-minute_ticker = MinuteTicker()
-t = Thread(target=minute_ticker.on_minute_do)
-t.start()
-
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
 @app.route('/')
 def hello_world():
+    if MAINTENANCE_MODE:
+        return render_template('maintenance.html')
     return render_template('homeform.html')
 
 @app.route('/available/')
 def available():
+    if MAINTENANCE_MODE:
+        return render_template('maintenance.html')
     pwdb = PWDB()
     collections = pwdb.tax_db.nations
 
@@ -107,23 +69,28 @@ def available():
 
 @app.route('/list_taxed_members/')
 def list_taxed_members():
+    if MAINTENANCE_MODE:
+        return render_template('maintenance.html')
     pwdb = PWDB()
-    list = pwdb.list_members()
-    return jsonify(list=list)
+    mdict = {}
+    for nid in pwdb.list_members():
+        mdict[nid] = pwdb.pwc.get_nation_name_from_id(nid)
+    return jsonify(list=mdict)
 
 @app.route('/turns_since_collected/<nation_id>/')
 def get_turns_since_collected(nation_id):
+    if MAINTENANCE_MODE:
+        return render_template('maintenance.html')
     pwdb = PWDB()
     n = pwdb.get_nation(nation_id, or_create=False)
     return n[turns_since_collected_key]
 
-@app.route('/fancy_slackers/')
-def fancy_slackers():
-    return render_template('slackers.html')
-
 
 @app.route('/slackers/')
 def find_slackers():
+
+    if MAINTENANCE_MODE:
+        return render_template('maintenance.html')
 
     pwdb = PWDB()
     nations = pwdb.tax_db.nations
@@ -152,6 +119,8 @@ def find_slackers():
 
 
 def do_request(nation_id):
+    if MAINTENANCE_MODE:
+        return render_template('maintenance.html')
     reqbot = RequestBot()
     results = reqbot.make_request(str(nation_id))
     renderstring = ""
@@ -184,31 +153,27 @@ def do_request(nation_id):
 
 @app.route('/request/<nation_id>/')
 def request_with_id(nation_id):
+    if MAINTENANCE_MODE:
+        return render_template('maintenance.html')
     return do_request(nation_id)
 
 
 @app.route('/request/', methods=['POST'])
 def make_request():
+    if MAINTENANCE_MODE:
+        return render_template('maintenance.html')
+
     if request.method == 'POST':
         nation_id = request.form['nid']
         return do_request(nation_id)
 
 @app.route('/queue_n/<to>/<subject>/<body>/<time>/')
 def queue_n(to, subject, body, time):
+    if MAINTENANCE_MODE:
+        return render_template('maintenance.html')
     t = Thread(target = lambda: wait_to_mail(to, subject, body, time))
     t.start()
     return "Notification queued to "+to+" in "+time
-
-@app.route('/add_beige_watch/<watcher_email>/<nation_id>/')
-def add_beige_watch(watcher_email, nation_id):
-    try:
-        if nation_id in minute_ticker.beige_watches.keys():
-            minute_ticker.beige_watches[nation_id].append(watcher_email)
-        else:
-            minute_ticker.beige_watches[nation_id] = [watcher_email]
-    except Exception as e:
-        print e
-    return "ok"
 
 def wait_to_mail(to, subject, body, time_to_wait):
     time_to_wait = int(time_to_wait)
