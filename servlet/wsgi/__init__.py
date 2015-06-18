@@ -45,6 +45,20 @@ def hello_world():
         return render_template('maintenance.html')
     return render_template('homeform.html')
 
+
+@app.route('/datadump/')
+def datadump():
+    pwdb = PWDB()
+    ret_list = {}
+    for document in pwdb.falcon_records.find():
+        ret_list[str(document["_id"])] = {}
+        for key in document:
+            if type(document[key]) is dict:
+                ret_list[str(document["_id"])][key] = document[key]
+            else:
+                ret_list[str(document["_id"])][key] = str(document[key])
+    return jsonify(ret_list)
+
 @app.route('/available/')
 def available():
     if MAINTENANCE_MODE:
