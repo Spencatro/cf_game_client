@@ -72,19 +72,8 @@ def list_taxed_members():
     if MAINTENANCE_MODE:
         return render_template('maintenance.html')
     pwdb = PWDB()
-    mdict = {}
-    for nid in pwdb.list_members():
-        mdict[nid] = pwdb.pwc.get_nation_name_from_id(nid)
-    return jsonify(list=mdict)
-
-@app.route('/turns_since_collected/<nation_id>/')
-def get_turns_since_collected(nation_id):
-    if MAINTENANCE_MODE:
-        return render_template('maintenance.html')
-    pwdb = PWDB()
-    n = pwdb.get_nation(nation_id, or_create=False)
-    return n[turns_since_collected_key]
-
+    tlist = pwdb.list_members()
+    return jsonify(tlist=tlist)
 
 @app.route('/slackers/')
 def find_slackers():
@@ -97,20 +86,19 @@ def find_slackers():
 
     all_nations = []
     for nation in nations.find():
-        try:
-            all_nations.append((nation['nation_id'], pwdb.pwc.get_nation_name_from_id(nation['nation_id']), nation[turns_since_collected_key]))
-        except NationDoesNotExistError:
-            pass
+        all_nations.append((nation['nation_id'], nation['name'], nation[turns_since_collected_key]))
 
     all_nations.sort(key=lambda x: x[2], reverse=True)
 
-    renderstring = "<h1>Slackers</h1> <br />"
+    renderstring = "<h1>Slackers!</h1>"
     for ntuple in all_nations:
         color = "#999"
+        if ntuple[2] < 2:
+            color = "#DDD"
         if ntuple[2] > 5:
             color = "#000"
         if ntuple[2] > 10:
-            color = "#B00"
+            color = "#F99"
         if ntuple[2] > 20:
             color = "#F00"
         renderstring += "<p style='color:"+color+";'>Nation "+ntuple[1]+" has not collected in "+str(ntuple[2])+" turns!</p>"

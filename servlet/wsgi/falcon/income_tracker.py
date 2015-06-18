@@ -6,7 +6,7 @@ from pnw_db import rsc_key, score_diff_key, collected_key, can_collect_key, tota
 
 __author__ = 'sxh112430'
 
-MAX_COLLECTION_TIMEDELTA = timedelta(days=3)
+MAX_COLLECTION_TIMEDELTA = timedelta(days=5)
 BASE_TAX = 1
 
 class IncomeTracker:
@@ -102,7 +102,10 @@ class IncomeTracker:
                 if record[can_collect_key]:
                     nation_tax_db[owed_key][resource_type] += amount_sent - amount_collected
                     total_retained_this_turn[resource_type] += amount_sent - amount_collected
-
+            
+            nation_name = pwdb.pwc.get_nation_name_from_id(nation_id)
+            nation_tax_db['name'] = nation_name
+            
             nation_tax_db[turns_since_collected_key] += 1
             pwdb.set_nation(nation_id, nation_tax_db)
 
@@ -139,7 +142,7 @@ class IncomeTracker:
                 amount_owed = amount * owed_percentage
                 nation_tax_db[owed_key][resource_type] += amount_owed
                 total_returned_from_collected[resource_type] += amount_owed
-
+            
             pwdb.set_nation(nation_id, nation_tax_db)
 
         # print "Diff percent total: ",sum_diff_percentage
