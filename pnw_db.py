@@ -37,7 +37,19 @@ class PWDB:
         self.nations = self.tax_db.nations
         assert isinstance(self.nations, Collection)
 
+        self.tax_record_db = self.mongo_client.tax_record_db
+        assert isinstance(self.tax_db, Database)
+
+        self.falcon_records = self.tax_record_db.falcon_records
+        assert isinstance(self.nations, Collection)
+
+        self.falcon_withdraw_records = self.tax_record_db.falcon_withdraw_records
+        assert isinstance(self.nations, Collection)
+
         self.graph_counter = self.tax_db.graph_counter
+        assert isinstance(self.nations, Collection)
+
+        self.falcon_counter = self.tax_record_db.falcon_counter
         assert isinstance(self.nations, Collection)
 
     def _init_pwc(self):
@@ -107,3 +119,37 @@ class PWDB:
         gcount['graph_count'] += 1
         self.graph_counter.update({'graph_count':prev_num}, {"$set":gcount})
         return prev_num + 1
+
+    def increase_falcon_counter(self):
+        fcount = self.falcon_counter.find_one()
+        prev_num = fcount['falcon_record_count']
+        fcount['falcon_record_count'] += 1
+        self.falcon_counter.update({'falcon_record_count':prev_num}, {"$set":fcount})
+        return prev_num + 1
+
+    def increase_falcon_withdraw_counter(self):
+        fcount = self.falcon_counter.find_one()
+        prev_num = fcount['falcon_withdraw_count']
+        fcount['falcon_withdraw_count'] += 1
+        self.falcon_counter.update({'falcon_withdraw_count':prev_num}, {"$set":fcount})
+        return prev_num + 1
+
+    def create_record(self, time, gamedate, data):
+        record_obj = {
+            'ticket':   self.increase_falcon_counter(),
+            'realtime': time,
+            'gametime': gamedate
+        }
+        record_obj.update(data)
+        self.falcon_records.insert_one(record_obj)
+
+    def create_withdraw_record(self, time, gamedate, data):
+        ticket_no = self.increase_falcon_withdraw_counter()
+        record_obj = {
+            'ticket':   ticket_no,
+            'realtime': time,
+            'gametime': gamedate
+        }
+        record_obj.update(data)
+        self.falcon_withdraw_records.insert_one(record_obj)
+        return ticket_no

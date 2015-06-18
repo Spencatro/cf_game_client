@@ -1,13 +1,12 @@
 from datetime import datetime, timedelta
 from pnw_db import PWDB, turns_since_collected_key
-from pw_client import PWClient, DEBUG_LEVEL_MEGA_VERBOSE, DEBUG_LEVEL_STFU
+from pw_client import PWClient, DEBUG_LEVEL_STFU
 import os
 from pnw_db import rsc_key, score_diff_key, collected_key, can_collect_key, total_paid_key, owed_key
 
 __author__ = 'sxh112430'
 
 MAX_COLLECTION_TIMEDELTA = timedelta(days=5)
-BASE_TAX = 1
 
 class IncomeTracker:
     def __init__(self):
@@ -23,6 +22,8 @@ class IncomeTracker:
         pwdb = PWDB(__username, __pass)
         pwc = pwdb.pwc
         assert isinstance(pwc, PWClient)
+
+        now = datetime.now()
 
         pwc.debug = DEBUG_LEVEL_STFU
         records = pwc.get_alliance_tax_records_from_id(1356, only_last_turn=True)
@@ -57,12 +58,19 @@ class IncomeTracker:
         total_collected_this_turn = {}
         # This is how much was returned to little nations
         total_returned_from_collected = {}
-        # This tracks how much was retained by each nation
-        total_retained_this_turn = {}
 
+        turn_data = {}
         # Apply baserate
         for record in records:
             nation_id = record['sender']
+            turn_data[nation_id] = {}
+            turn_data[nation_id]['paid'] = {}
+            turn_data[nation_id]['owed'] = {}
+
+            turn_data[nation_id]['score'] = record['nation_obj'].score
+            turn_data[nation_id]['avg_alliance_score'] = average_score
+            turn_data[nation_id]['total_alliance_score'] = total_score
+
             nation_tax_db = pwdb.get_nation(nation_id)
             last_collected_date = nation_tax_db[collected_key]
 
@@ -77,11 +85,14 @@ class IncomeTracker:
                 if resource_type not in total_collected_this_turn.keys():
                     total_collected_this_turn[resource_type] = 0
 
+                if resource_type not in turn_data[nation_id]['owed'].keys():
+                    turn_data[nation_id]['owed'][resource_type] = 0
+
+                if resource_type not in turn_data[nation_id]['paid'].keys():
+                    turn_data[nation_id]['paid'][resource_type] = 0
+
                 if resource_type not in total_returned_from_collected.keys():
                     total_returned_from_collected[resource_type] = 0
-
-                if resource_type not in total_retained_this_turn.keys():
-                    total_retained_this_turn[resource_type] = 0
 
                 if resource_type not in nation_tax_db[owed_key].keys():
                     nation_tax_db[owed_key][resource_type] = 0
@@ -91,23 +102,28 @@ class IncomeTracker:
 
                 amount_sent = resources[resource_type]  # Total sent in
                 nation_tax_db[total_paid_key][resource_type] = amount_sent
-
-                # Decide to take tax rate or 100%
-                amount_collected = amount_sent * BASE_TAX
-                if not record[can_collect_key]:
-                    amount_collected = amount_sent  # collect 100%
+                turn_data[nation_id]['paid'][resource_type] = amount_sent
 
                 # Register how much was collected
-                total_collected_this_turn[resource_type] += amount_collected
-                if record[can_collect_key]:
-                    nation_tax_db[owed_key][resource_type] += amount_sent - amount_collected
-                    total_retained_this_turn[resource_type] += amount_sent - amount_collected
+                total_collected_this_turn[resource_type] += amount_sent
             
             nation_name = pwdb.pwc.get_nation_name_from_id(nation_id)
+            turn_data[nation_id]['name'] = nation_name
+            turn_data[nation_id]['nation_id'] = nation_id
             nation_tax_db['name'] = nation_name
-            
+
+            if not turns_since_collected_key in nation_tax_db.keys():
+                nation_tax_db[turns_since_collected_key] = 0
+
             nation_tax_db[turns_since_collected_key] += 1
+
+            if not record[can_collect_key]:
+                nation_tax_db[turns_since_collected_key] = -1
+            if record['nation_obj'].color.strip() == "Gray":
+                nation_tax_db[turns_since_collected_key] = -2
+
             pwdb.set_nation(nation_id, nation_tax_db)
+            turn_data[nation_id]['date'] = record['date']
 
         # Determine who is still owed from reserves
         collectors = [record for record in records if record[can_collect_key]
@@ -136,14 +152,19 @@ class IncomeTracker:
             print nation_id, "gets", diff_percentage, "%"
             sum_diff_percentage += diff_percentage
             owed_percentage = 0.9 * diff_percentage
-            resources = record[rsc_key]
+
             for resource_type in total_collected_this_turn.keys():
                 amount = total_collected_this_turn[resource_type]
                 amount_owed = amount * owed_percentage
                 nation_tax_db[owed_key][resource_type] += amount_owed
                 total_returned_from_collected[resource_type] += amount_owed
-            
+                turn_data[nation_id]['owed'][resource_type] += amount_owed
+
             pwdb.set_nation(nation_id, nation_tax_db)
+
+        for nation_key in turn_data.keys():
+            nation_data = turn_data[nation_key]
+            pwdb.create_record(now, nation_data['date'], nation_data)
 
         # print "Diff percent total: ",sum_diff_percentage
 
@@ -152,9 +173,8 @@ class IncomeTracker:
             print "actual   ", ACTUAL_TOTAL[key]
             print "collected", total_collected_this_turn[key]
             print "returned ", total_returned_from_collected[key]
-            print "retained ", total_retained_this_turn[key]
             #
             # # Inputs equaled output
             print "==?"
-            print total_retained_this_turn[key] + total_collected_this_turn[key]
+            print total_collected_this_turn[key]
             print ACTUAL_TOTAL[key]

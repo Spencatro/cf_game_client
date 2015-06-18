@@ -73,8 +73,25 @@ class RequestBot:
 
         self.pwdb._init_pwc()
 
-        self.pwdb.pwc.make_bank_withdrawal(nation_id, money=money_owed, food=food_owed, coal=coal_owed,
+        data = {}
+        data['money_owed'] = money_owed
+        data['food_owed'] = food_owed
+        data['coal_owed'] = coal_owed
+        data['uranium_owed'] = uranium_owed
+        data['oil_owed'] = oil_owed
+        data['lead_owed'] = lead_owed
+        data['iron_owed'] = iron_owed
+        data['bauxite_owed'] = bauxite_owed
+        data['gasoline_owed'] = gasoline_owed
+        data['munitions_owed'] = munitions_owed
+        data['steel_owed'] = steel_owed
+        data['aluminum_owed'] = aluminum_owed
+
+        gametime = self.pwdb.pwc.get_current_date_in_datetime()
+        ticket_no = self.pwdb.create_withdraw_record(datetime.datetime.now(), gametime, data)
+
+        self.pwdb.pwc.make_bank_withdrawal(nation_id, ticket_no, money=money_owed, food=food_owed, coal=coal_owed,
                                            uranium=uranium_owed, oil=oil_owed, lead=lead_owed, iron=iron_owed,
                                            bauxite=bauxite_owed, gasoline=gasoline_owed, munitions=munitions_owed,
                                            steel=steel_owed, aluminum=aluminum_owed)
-        print "I'm finished! ", money_owed
+        print "I'm finished! ", money_owed, ticket_no

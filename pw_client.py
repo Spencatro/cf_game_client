@@ -989,7 +989,7 @@ class PWClient:
 
         return sorted_battles
 
-    def make_bank_withdrawal(self, recipient_id, money=0, food=0, coal=0, oil=0, uranium=0, lead=0, iron=0, bauxite=0,
+    def make_bank_withdrawal(self, recipient_id, ticket_no, money=0, food=0, coal=0, oil=0, uranium=0, lead=0, iron=0, bauxite=0,
                              gasoline=0, munitions=0, steel=0, aluminum=0):
 
         recipient_id = str(recipient_id)
@@ -1014,7 +1014,7 @@ class PWClient:
             'withaluminum': aluminum,
             'withtype': 'Nation',
             'withrecipient': recipient_name,
-            'withnote': 'FALCON n'+str(0),
+            'withnote': 'FALCON n-'+str(ticket_no),
             'withsubmit': 'Withdraw'
         }
         self.__make_http_request(self.__root_url + "/alliance/id=1356&display=bank", body=body_data, request_type='POST')
