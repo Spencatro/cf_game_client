@@ -1,3 +1,4 @@
+import threading
 from income_tracker import owed_key, collected_key
 from pnw_db import PWDB, turns_since_collected_key
 import copy
@@ -22,6 +23,7 @@ class RequestBot:
 
     def make_request(self, nation_id):
         nation_id = str(nation_id).strip()
+
         nation_tax_db = self.pwdb.get_nation(nation_id)
 
         money_owed =        nation_tax_db[owed_key]['money']
@@ -57,11 +59,22 @@ class RequestBot:
 
         self.pwdb.set_nation(nation_id, nation_tax_db)
 
-        self.pwdb._init_pwc()
-
-        self.pwdb.pwc.make_bank_withdrawal(nation_id, money=money_owed, food=food_owed, coal=coal_owed, uranium=uranium_owed,
-                                      oil=oil_owed, lead=lead_owed, iron=iron_owed, bauxite=bauxite_owed,
-                                      gasoline=gasoline_owed, munitions=munitions_owed, steel=steel_owed,
-                                      aluminum=aluminum_owed)
+        thread = threading.Thread(target=lambda: self.critical(nation_id, money_owed, food_owed, coal_owed,
+                                                               uranium_owed, oil_owed, lead_owed, iron_owed,
+                                                               bauxite_owed, gasoline_owed, munitions_owed, steel_owed,
+                                                               aluminum_owed))
+        print "Starting thread, ", money_owed
+        thread.start()
 
         return result
+
+    def critical(self, nation_id, money_owed, food_owed, coal_owed, uranium_owed, oil_owed, lead_owed, iron_owed,
+                 bauxite_owed, gasoline_owed, munitions_owed, steel_owed, aluminum_owed):
+
+        self.pwdb._init_pwc()
+
+        self.pwdb.pwc.make_bank_withdrawal(nation_id, money=money_owed, food=food_owed, coal=coal_owed,
+                                           uranium=uranium_owed, oil=oil_owed, lead=lead_owed, iron=iron_owed,
+                                           bauxite=bauxite_owed, gasoline=gasoline_owed, munitions=munitions_owed,
+                                           steel=steel_owed, aluminum=aluminum_owed)
+        print "I'm finished! ", money_owed

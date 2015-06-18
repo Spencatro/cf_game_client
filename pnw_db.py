@@ -2,6 +2,10 @@ from datetime import datetime
 from pymongo.collection import Collection
 from pymongo.database import Database
 from pymongo.mongo_client import MongoClient
+import sys
+sys.path.append("/var/www/falcon/pnw_stats_finder")
+sys.path.append("/var/www/falcon/pnw_stats_finder/servlet/mlibs")
+from servlet.settings import MAINTENANCE_MODE
 
 __author__ = 'sxh112430'
 
@@ -63,10 +67,16 @@ class PWDB:
     def make_nation(self, nation_id):
         if self.nation_exists(nation_id):
             return False
-        return self.nations.insert_one({'nation_id': str(nation_id),
-                                        collected_key: self.pwc.get_current_date_in_datetime(),
-                                        owed_key: {},
-                                        total_paid_key: {}}).inserted_id
+
+        nation_obj = { 'nation_id': str(nation_id),
+                       collected_key: self.pwc.get_current_date_in_datetime(),
+                       owed_key: {},
+                       total_paid_key: {}}
+
+        if MAINTENANCE_MODE:
+            nation_obj['maintenance'] = True
+
+        return self.nations.insert_one(nation_obj).inserted_id
 
     def get_nation(self, nation_id, or_create=True):
         result = self.nations.find_one({'nation_id':str(nation_id)})
@@ -83,11 +93,13 @@ class PWDB:
     def set_nation_attrib(self, nation_id, attrib, value):
         nation = self.get_nation(nation_id)
         nation[attrib] = value
-        self.nations.update({'nation_id':nation_id}, {"$set":nation}, upsert=True)
+        if not MAINTENANCE_MODE:
+            self.nations.update({'nation_id':nation_id}, {"$set":nation}, upsert=True)
 
 
     def set_nation(self, nation_id, nation_dict):
-        self.nations.update({'nation_id':nation_id}, {"$set":nation_dict}, upsert=True)
+        if not MAINTENANCE_MODE:
+            self.nations.update({'nation_id':nation_id}, {"$set":nation_dict}, upsert=True)
 
     def increase_graph_counter(self):
         gcount = self.graph_counter.find_one()
