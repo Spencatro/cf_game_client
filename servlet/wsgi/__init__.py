@@ -5,6 +5,7 @@ __author__ = 'sxh112430'
 import sys
 sys.path.append("/var/www/falcon/pnw_stats_finder")
 sys.path.append("/var/www/falcon/pnw_stats_finder/servlet/mlibs")
+from servlet.wsgi.falcon.income_tracker import MAX_COLLECTION_TIMEDELTA
 from servlet.settings import MAINTENANCE_MODE
 from threading import Thread
 import time
@@ -86,22 +87,26 @@ def find_slackers():
 
     all_nations = []
     for nation in nations.find():
-        all_nations.append((nation['nation_id'], nation['name'], nation[turns_since_collected_key]))
+        all_nations.append(nation)
 
-    all_nations.sort(key=lambda x: x[2], reverse=True)
+    all_nations.sort(key=lambda x: x[turns_since_collected_key], reverse=True)
 
     renderstring = "<h1>Slackers!</h1>"
-    for ntuple in all_nations:
+    for nation in all_nations:
         color = "#999"
-        if ntuple[2] < 2:
+        if nation[turns_since_collected_key] < 2:
             color = "#DDD"
-        if ntuple[2] > 5:
+        if nation[turns_since_collected_key] > 5:
             color = "#000"
-        if ntuple[2] > 10:
+        if nation[turns_since_collected_key] > 10:
             color = "#F99"
-        if ntuple[2] > 20:
+        if nation[turns_since_collected_key] > 20:
             color = "#F00"
-        renderstring += "<p style='color:"+color+";'>Nation "+ntuple[1]+" has not collected in "+str(ntuple[2])+" turns!</p>"
+        renderstring += "<p style='color:"+color+";'>Nation "+nation['name']+" has not collected in " + \
+                        str(nation[turns_since_collected_key])+" turns!"
+        if nation[turns_since_collected_key] >= MAX_COLLECTION_TIMEDELTA.total_seconds() / 60 / 60 / 2:
+            renderstring += " This nation is no longer accruing revenue from FALCON, due to inactivity!"
+        renderstring += "</p>"
 
     return renderstring
 
