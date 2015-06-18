@@ -86,6 +86,7 @@ class RequestBot:
         data['munitions_owed'] = munitions_owed
         data['steel_owed'] = steel_owed
         data['aluminum_owed'] = aluminum_owed
+        data['nation'] = nation_id
 
         gametime = self.pwdb.pwc.get_current_date_in_datetime()
         ticket_no = self.pwdb.create_withdraw_record(datetime.datetime.now(), gametime, data)
