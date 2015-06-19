@@ -25,12 +25,14 @@ class PWDB:
         self.pwc = None
         self.__username = username
         self.__password = password
-
+        with open("/var/www/falcon/dbauth") as uf:
+            db_user = uf.readline().strip()
+            db_pw = uf.readline().strip() 
         if not skip_pwclient:
             self._init_pwc()
 
         self.mongo_client = MongoClient()
-
+        self.mongo_client.tax_db.authenticate(db_user, db_pw)
         self.tax_db = self.mongo_client.tax_db
         assert isinstance(self.tax_db, Database)
 
