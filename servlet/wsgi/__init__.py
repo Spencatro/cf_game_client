@@ -1,4 +1,7 @@
 from datetime import datetime, timedelta
+import pprint
+import pygal
+from servlet.wsgi.graph_factory import SmartGraph
 
 __author__ = 'sxh112430'
 
@@ -58,6 +61,16 @@ def datadump():
             else:
                 ret_list[str(document["_id"])][key] = str(document[key])
     return jsonify(ret_list)
+
+@app.route('/falcon_history/<nation_id>/<turns>/')
+def falcon_history(nation_id, turns):
+    smartgraph = SmartGraph(pygal.StackedLine)
+    pwdb = PWDB()
+    pwdb.
+    thing = smartgraph.create_graph_object()
+    render = thing.render()
+    render = render.decode("utf8")
+    return render_template("graph.html", title="Test!", graph=render)
 
 @app.route('/available/')
 def available():

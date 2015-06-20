@@ -25,13 +25,18 @@ class PWDB:
         self.pwc = None
         self.__username = username
         self.__password = password
-        with open("/var/www/falcon/dbauth") as uf:
-            db_user = uf.readline().strip()
-            db_pw = uf.readline().strip() 
+
+        if 'PWDBUSER' in os.environ:
+            db_user = os.environ['PWDBUSER']
+            db_pw = os.environ['PWDBPASS']
+        else:
+            with open("/var/www/falcon/dbauth") as uf:
+                db_user = uf.readline().strip()
+                db_pw = uf.readline().strip()
         if not skip_pwclient:
             self._init_pwc()
 
-        self.mongo_client = MongoClient()
+        self.mongo_client = MongoClient(host="falcon.spencer-hawkins.com")
         self.mongo_client.tax_db.authenticate(db_user, db_pw)
         self.tax_db = self.mongo_client.tax_db
         assert isinstance(self.tax_db, Database)
@@ -42,7 +47,7 @@ class PWDB:
         self.tax_record_db = self.mongo_client.tax_record_db
         assert isinstance(self.tax_db, Database)
 
-        self.falcon_records = self.tax_record_db.falcon_records
+        self.falcon_records = self.tax_record_db.new_col
         assert isinstance(self.nations, Collection)
 
         self.falcon_withdraw_records = self.tax_record_db.falcon_withdraw_records
@@ -137,13 +142,15 @@ class PWDB:
         return prev_num + 1
 
     def create_record(self, time, gamedate, data):
+        gametime_record = self.get_record_at_time(gamedate)
         record_obj = {
             'ticket':   self.increase_falcon_counter(),
             'realtime': time,
             'gametime': gamedate
         }
         record_obj.update(data)
-        self.falcon_records.insert_one(record_obj)
+        gametime_record['records'][record_obj['nation_id']] = record_obj
+        self.falcon_records.update({'gametime': gamedate}, {"$set": record_obj}, upsert=True)
 
     def create_withdraw_record(self, time, gamedate, data):
         ticket_no = self.increase_falcon_withdraw_counter()
@@ -155,3 +162,12 @@ class PWDB:
         record_obj.update(data)
         self.falcon_withdraw_records.insert_one(record_obj)
         return ticket_no
+
+    def get_record_at_time(self, gametime, or_create=True):
+        record = self.falcon_records.find_one({'gametime':gametime})
+        if record is None and or_create:
+            record = {'gametime':gametime, 'records': {}}
+        return record
+
+    def get_recent_withdraw_records(self, time_since):
+        pass
