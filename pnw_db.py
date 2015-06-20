@@ -90,6 +90,7 @@ class PWDB:
         nation_obj = { 'nation_id': str(nation_id),
                        collected_key: self.pwc.get_current_date_in_datetime(),
                        owed_key: {},
+                       turns_since_collected_key: 0,
                        total_paid_key: {}}
 
         if MAINTENANCE_MODE:
