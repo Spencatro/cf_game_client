@@ -151,7 +151,7 @@ class PWDB:
         }
         record_obj.update(data)
         gametime_record['records'][record_obj['nation_id']] = record_obj
-        self.falcon_records.update({'gametime': gamedate}, {"$set": record_obj}, upsert=True)
+        self.falcon_records.update({'gametime': gamedate}, {"$set": gametime_record}, upsert=True)
 
     def create_withdraw_record(self, time, gamedate, data):
         ticket_no = self.increase_falcon_withdraw_counter()
@@ -165,10 +165,14 @@ class PWDB:
         return ticket_no
 
     def get_record_at_time(self, gametime, or_create=True):
-        record = self.falcon_records.find_one({'gametime':gametime})
+        record = self.falcon_records.find_one({'gametime': gametime})
         if record is None and or_create:
             record = {'gametime':gametime, 'records': {}}
         return record
 
     def get_recent_withdraw_records(self, time_since):
         pass
+
+    def get_recent_tax_records(self, time_since):
+        time = datetime.now() - time_since
+        return self.falcon_records.find({'gametime':{"$gt":time}})
