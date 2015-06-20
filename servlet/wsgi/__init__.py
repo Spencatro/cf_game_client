@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 import pprint
-import pygal
+import plotly
+from plotly.graph_objs import *
+import plotly.plotly as py
 
 __author__ = 'sxh112430'
 
@@ -62,14 +64,227 @@ def datadump():
                 ret_list[str(document["_id"])][key] = str(document[key])
     return jsonify(ret_list)
 
-@app.route('/falcon_history/<nation_id>/<turns>/')
-def falcon_history(nation_id, turns):
-    smartgraph = SmartGraph(pygal.StackedLine)
+@app.route('/payout_history/nation_id=<nation_id>/turns=<turns>/resource=<resource_type>/')
+def individual_history(nation_id, turns, resource_type):
+
+    num_days = float(turns) / 12.0
+    time_difference = timedelta(days=num_days)
+
     pwdb = PWDB()
-    thing = smartgraph.create_graph_object()
-    render = thing.render()
-    render = render.decode("utf8")
-    return render_template("graph.html", title="Test!", graph=render)
+
+    records = []
+
+    turn_numbers = []
+    nation_payouts = []
+    nation_scores = []
+    average_nation_scores = []
+
+    for record in pwdb.get_recent_tax_records(time_since=time_difference):
+        records.append(record)
+
+    records.sort(key=lambda x: x['gametime'])
+
+    texts = []
+
+    for idx in range(len(records)):
+        time_record = records[idx]
+        turn_number = idx
+        record = time_record['records'][nation_id]
+        nation_score = record['score']
+        nation_payout = record['owed'][resource_type]
+        average_nation_score = record['avg_alliance_score']
+
+        if not 'hidden' in record.keys():
+            turn_numbers.append(turn_number)
+            nation_payouts.append(nation_payout)
+            nation_scores.append(nation_score)
+            average_nation_scores.append(average_nation_score)
+            annotation = record['name']
+
+            texts.append(annotation)
+
+    trace1 = Scatter(
+        x=turn_numbers,
+        y=nation_payouts,
+        mode="lines+markers",
+        text=texts,
+        name="Payout ("+str(resource_type)+")",
+
+        marker=Marker(
+            color='rgb(0, 127, 0)',
+            size=12,
+            symbol='circle',
+            line=Line(
+                color='rgb(204, 204, 204)',
+                width=1
+            ),
+            opacity=0.9
+        ),
+        line=Line(
+            shape='spline'
+        )
+    )
+
+    trace2 = Scatter(
+        x=turn_numbers,
+        y=nation_scores,
+        mode="lines+markers",
+        name="Score",
+        text=texts,
+
+        marker=Marker(
+            color='rgb(127, 0, 0)',
+            size=12,
+            symbol='circle',
+            line=Line(
+                color='rgb(204, 204, 204)',
+                width=1
+            ),
+            opacity=0.9
+        ),
+        line=Line(
+            shape='spline'
+        ),
+        yaxis='y2'
+    )
+
+
+    trace3 = Scatter(
+        x=turn_numbers,
+        y=average_nation_scores,
+        mode="lines+markers",
+        name="Average Alliance Score",
+
+        marker=Marker(
+            color='rgb(0, 0, 127)',
+            size=12,
+            symbol='circle',
+            line=Line(
+                color='rgb(204, 204, 204)',
+                width=1
+            ),
+            opacity=0.9
+        ),
+        line=Line(
+            shape='spline'
+        ),
+        yaxis='y2'
+    )
+
+
+    data = Data([trace1, trace2, trace3])
+
+    layout = Layout(
+        margin=Margin(
+            l=0,
+            r=0,
+            b=0,
+            t=0
+        ),
+        xaxis=XAxis(title='Turn'),
+        yaxis=YAxis(title='Payout ('+str(resource_type)+')'),
+        yaxis2=YAxis(
+            title='Score',
+            overlaying='y',
+            side='right'
+        )
+
+    )
+
+
+    fig = Figure(data=data, layout=layout)
+    plot_url = py.plot(fig, filename='individual_payout_history-'+str(nation_id)+"-"+str(turns)+'-'+str(resource_type), auto_open=False)
+
+    html = plotly.tools.get_embed(plot_url)
+
+    return render_template("graph.html", title="FALCON Payouts: "+str(nation_id)+": "+str(resource_type)+
+                                               " over the last "+str(turns)+" turns", graph=html)
+
+
+
+@app.route('/payout_history/turns=<turns>/resource=<resource_type>/')
+def falcon_history(turns, resource_type):
+
+    num_days = float(turns) / 12.0
+    time_difference = timedelta(days=num_days)
+
+    pwdb = PWDB()
+
+    records = []
+
+    xes = []
+    yes = []
+    zes = []
+    for record in pwdb.get_recent_tax_records(time_since=time_difference):
+        records.append(record)
+
+    records.sort(key=lambda x: x['gametime'])
+
+    texts = []
+
+    for idx in range(len(records)):
+        time_record = records[idx]
+        x = idx
+        for record_key in time_record['records'].keys():
+            record = time_record['records'][record_key]
+            y = record['score']
+            z = record['owed'][resource_type]
+
+            if z > 8000:
+                # pprint.pprint(record)
+                pprint.pprint(time_record)
+
+            if not 'hidden' in record.keys():
+                xes.append(x)
+                yes.append(y)
+                zes.append(z)
+
+                annotation = record['name']
+
+                texts.append(annotation)
+
+    trace1 = Scatter3d(
+        x=xes,
+        y=yes,
+        z=zes,
+        mode="markers",
+        text=texts,
+
+        marker=Marker(
+            color='rgb(127, 127, 127)',
+            size=12,
+            symbol='circle',
+            line=Line(
+                color='rgb(204, 204, 204)',
+                width=1
+            ),
+            opacity=0.9
+        ))
+
+
+    data = Data([trace1])
+    layout = Layout(
+        margin=Margin(
+            l=0,
+            r=0,
+            b=0,
+            t=0
+        ),
+        title="Score vs. Payout ($) over time",
+        scene=Scene(
+            xaxis=XAxis(title='Turn'),
+            yaxis=YAxis(title='Score'),
+            zaxis=ZAxis(title='Payout ($)')
+        )
+    )
+
+
+    fig = Figure(data=data, layout=layout)
+    plot_url = py.plot(fig, filename='payout_history-'+str(turns)+'-'+str(resource_type), auto_open=False)
+
+    html = plotly.tools.get_embed(plot_url)
+
+    return render_template("graph.html", title="FALCON Payouts: "+str(resource_type)+" over the last "+str(turns)+ " turns", graph=html)
 
 @app.route('/available/')
 def available():
