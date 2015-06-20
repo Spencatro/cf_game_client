@@ -66,7 +66,6 @@ def datadump():
 def falcon_history(nation_id, turns):
     smartgraph = SmartGraph(pygal.StackedLine)
     pwdb = PWDB()
-    pwdb.
     thing = smartgraph.create_graph_object()
     render = thing.render()
     render = render.decode("utf8")
