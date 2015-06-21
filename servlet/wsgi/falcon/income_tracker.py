@@ -151,7 +151,7 @@ class IncomeTracker:
             diff_percentage = record[score_diff_key] / differential_sum
             print nation_id, "gets", diff_percentage, "%"
             sum_diff_percentage += diff_percentage
-            owed_percentage = 0.9 * diff_percentage
+            owed_percentage = 0.8 * diff_percentage
 
             for resource_type in total_collected_this_turn.keys():
                 amount = total_collected_this_turn[resource_type]
