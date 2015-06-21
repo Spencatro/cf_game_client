@@ -4,6 +4,11 @@ import plotly
 from plotly.graph_objs import *
 import plotly.plotly as py
 
+with open("/var/www/falcon/plotlyauth") as pfile:
+    user = pfile.readline().strip()
+    pw = pfile.readline().strip()
+    plotly.plotly.sign_in(username=user, api_key=pw)
+
 __author__ = 'sxh112430'
 
 import sys
