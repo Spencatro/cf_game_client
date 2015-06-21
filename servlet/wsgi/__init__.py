@@ -9,7 +9,6 @@ __author__ = 'sxh112430'
 import sys
 sys.path.append("/var/www/falcon/pnw_stats_finder")
 sys.path.append("/var/www/falcon/pnw_stats_finder/servlet/mlibs")
-from servlet.wsgi.graph_factory import SmartGraph
 from servlet.wsgi.falcon.income_tracker import MAX_COLLECTION_TIMEDELTA
 from servlet.settings import MAINTENANCE_MODE
 from threading import Thread
@@ -90,9 +89,14 @@ def individual_history(nation_id, turns, resource_type):
         time_record = records[idx]
         turn_number = idx
         record = time_record['records'][nation_id]
+        turn_total = 0
+        for nation_key in time_record['records'].keys():
+            nation_record = time_record['records'][nation_key]
+            turn_total += nation_record['owed'][resource_type]
         nation_score = record['score']
         nation_payout = record['owed'][resource_type]
         average_nation_score = record['avg_alliance_score']
+        payout_as_percent = nation_payout / float(turn_total)
 
         if not 'hidden' in record.keys():
             turn_numbers.append(turn_number)
@@ -215,8 +219,79 @@ def falcon_history(turns, resource_type):
     xes = []
     yes = []
     zes = []
+
+    colors = {
+        "17274": {
+            "color": "rgb(102, 0, 204)",
+            "x": [],
+            "y": [],
+            "z": [],
+            "texts": [],
+            "name":"Butterkupistan"
+        },
+        "17269": {
+            "color": "rgb(255, 204, 0)",
+            "x": [],
+            "y": [],
+            "z": [],
+            "texts": [],
+            "name":"Parents just don't understand"
+        },
+        "17270": {
+            "color": "rgb(178, 0, 0)",
+            "x": [],
+            "y": [],
+            "z": [],
+            "texts": [],
+            "name": "New URAB"
+        }
+    }
+
     for record in pwdb.get_recent_tax_records(time_since=time_difference):
         records.append(record)
+
+    first_timerecord = records[len(records) - 1]
+
+    color_switch_counter = 0
+
+    max_nation_score = 0
+    for nkey in first_timerecord['records']:
+        score = first_timerecord['records'][nkey]['score']
+        max_nation_score = max(max_nation_score, score)
+
+    keys = first_timerecord['records'].keys()
+    keys.sort(key=lambda x: first_timerecord['records'][x]['score'])
+
+    for nation_key in keys:
+        if nation_key not in colors.keys():
+
+            score = first_timerecord['records'][nation_key]['score']
+            as_percent = score / float(max_nation_score)
+
+            str_p = str(int(as_percent * 60) + 180)
+
+            if color_switch_counter % 4 == 0:
+                my_color = "rgb("+str_p+", 180, 180)"
+
+            if color_switch_counter % 4 == 1:
+                my_color = "rgb(180, 180, "+str_p+")"
+
+            if color_switch_counter % 4 == 2:
+                my_color = "rgb("+str_p+", "+str_p+", "+str_p+")"
+
+            if color_switch_counter % 4 == 3:
+                my_color = "rgb(180, "+str_p+", 180)"
+
+            color_switch_counter += 1
+
+            colors[nation_key] = {
+                "color": my_color,
+                "x": [],
+                "y": [],
+                "z": [],
+                "texts": [],
+                "name": first_timerecord['records'][nation_key]['name']
+            }
 
     records.sort(key=lambda x: x['gametime'])
 
@@ -230,39 +305,49 @@ def falcon_history(turns, resource_type):
             y = record['score']
             z = record['owed'][resource_type]
 
-            if z > 8000:
-                # pprint.pprint(record)
-                pprint.pprint(time_record)
-
             if not 'hidden' in record.keys():
-                xes.append(x)
-                yes.append(y)
-                zes.append(z)
+                if record['nation_id'] in colors.keys():
+                    colors[record['nation_id']]['x'].append(x)
+                    colors[record['nation_id']]['y'].append(y)
+                    colors[record['nation_id']]['z'].append(z)
 
-                annotation = record['name']
+                    annotation = record['name']
 
-                texts.append(annotation)
+                    colors[record['nation_id']]['texts'].append(annotation)
+                else:
+                    xes.append(x)
+                    yes.append(y)
+                    zes.append(z)
 
-    trace1 = Scatter3d(
-        x=xes,
-        y=yes,
-        z=zes,
-        mode="markers",
-        text=texts,
+                    annotation = record['name']
 
-        marker=Marker(
-            color='rgb(127, 127, 127)',
-            size=12,
-            symbol='circle',
-            line=Line(
-                color='rgb(204, 204, 204)',
-                width=1
-            ),
-            opacity=0.9
-        ))
+                    texts.append(annotation)
 
+    traces = []
 
-    data = Data([trace1])
+    for nation_key in colors.keys():
+        color_trace = Scatter3d(
+            x=colors[nation_key]["x"],
+            y=colors[nation_key]["y"],
+            z=colors[nation_key]["z"],
+            mode="markers",
+            text=colors[nation_key]['texts'],
+            name=colors[nation_key]['name'],
+
+            marker=Marker(
+                color=colors[nation_key]["color"],
+                size=8,
+                symbol='circle',
+                # line=Line(
+                #     color=colors[nation_key]["color"],
+                #     width=1
+                # ),
+                opacity=0.9
+            )
+        )
+        traces.append(color_trace)
+
+    data = Data(traces)
     layout = Layout(
         margin=Margin(
             l=0,
@@ -274,7 +359,7 @@ def falcon_history(turns, resource_type):
         scene=Scene(
             xaxis=XAxis(title='Turn'),
             yaxis=YAxis(title='Score'),
-            zaxis=ZAxis(title='Payout ($)')
+            zaxis=ZAxis(title='Payout ('+str(resource_type)+')')
         )
     )
 
