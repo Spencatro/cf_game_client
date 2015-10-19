@@ -1,10 +1,29 @@
 from datetime import datetime
 import logging
 import os
-from tabulate import tabulate
 from pw_client import PWClient
 
 __author__ = 'shawkins'
+
+
+def list_to_tr(l):
+    html_string = "<tr>\n"
+    for i in l:
+        html_string += "\t<td>"+str(i)+"</td>\n"
+    html_string += "</tr>\n"
+    return html_string
+
+
+def matrix_to_table(matrix, headers):
+    html_string = "<table>\n<tr>\n"
+    for i in headers:
+        html_string += "\t<th>"+i+"</th>\n"
+    html_string += "</tr>\n"
+    for l in matrix:
+        html_string += list_to_tr(l)
+    html_string += "</table>"
+    return html_string
+
 
 logger = logging.getLogger("pwc")
 fhandler1 = logging.FileHandler("city_check.out", mode='w')
@@ -29,4 +48,6 @@ for nation in pwc.get_list_of_alliance_members_from_alliance_name("Charming Frie
     if min_days > 10:
         infos.append(info)
 
-print tabulate(infos, headers=["Nation", "# cities", "Most recent city ..............", "Days since built"], tablefmt="grid")
+headers=["Nation", "# cities", "Most recent city ..............", "Days since built"]
+
+print matrix_to_table(infos, headers)
