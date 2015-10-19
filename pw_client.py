@@ -10,6 +10,7 @@ import lxml.etree as ET
 import re
 import logging
 import sys
+import requests
 
 __author__ = 'sxh112430'
 
@@ -186,6 +187,16 @@ class Alliance:
     score = None
     bank_balance = None
 
+
+class City:
+    name = None
+    population = None
+    infrastructure = None
+    land_area = None
+    powered = None
+    founded = None
+
+
 class Nation:
     military = None
     score = None
@@ -205,6 +216,7 @@ class Nation:
     nation_id = None
     time_since_active = None
     precisely_founded = False
+    cities = []
 
     warrable_list = []
 
@@ -226,6 +238,7 @@ class PWClient:
         self.__username = username
         self.__password = password
         self.__using_db = False
+        self.session = requests.Session()
 
         self._authenticate()
         if logger is None:
@@ -241,13 +254,11 @@ class PWClient:
         :return: None
         """
         self._print(1, "Starting authentication as:",self.__username)
-        r,c = self.__make_http_request(self.__root_url+'/login/', body={'email':self.__username, 'password':self.__password, 'sesh':'', 'loginform':'Login'}, request_type='POST')
+        r,c = self.__make_http_request(self.__root_url+'/login/', body={'email':self.__username, 'password':self.__password, 'loginform':'Login'}, request_type='POST')
+        for cookie in self.session.cookies:
+            self.headers[cookie.name] = cookie.value
         if "Login Failure" in c:
             raise Exception("Failure to authenticate!")
-        if not 'set-cookie' in r:
-            self._print(1, "Already authed?")
-            return
-        self.headers['Cookie'] = r['set-cookie']
         self._print(1, "Authentication success!")
 
     def __query_timecheck(self):
@@ -283,7 +294,10 @@ class PWClient:
         if body != None:
             body = urlencode(body)
         try:
-            response, content = self.http.request(url, request_type, body = body, headers = r_headers)
+            response = self.session.request(request_type, url, data=body, headers=self.headers)
+            content = response.content
+            response = response.headers
+            # response, content = self.http.request(url, request_type, body = body, headers = r_headers)
         except (Exception, SystemExit ) as e:
             raise
         return response, content
@@ -332,7 +346,9 @@ class PWClient:
             raise NationDoesNotExistError(url)
         parser = ET.XMLParser(recover=True)
         tree = ET.fromstring(content, parser=parser)
+
         nationtables = tree.findall(".//table[@class='nationtable']")
+
         return nationtables[idx]
 
     def _generate_full_query_list(self, url, minimum=0, maximum=50):
@@ -415,7 +431,6 @@ class PWClient:
         nations = []
         for nation in self._generate_full_nation_list(query_url):
             assert isinstance(nation, Nation)
-            n = Nation
             nations.append(nation)
         return nations
 
@@ -585,8 +600,32 @@ class PWClient:
 
         nation = Nation()
         military = Military()
+        cities = []
 
-        nation.nation_id =nation_id
+        second_nationtable = self._retrieve_nationtable(url, 1)
+        for city in second_nationtable.findall(".//tr/td/a"):
+
+            city_obj = City()
+            city_obj.name = city.text
+            city_link = city.attrib["href"]
+            city_table = self._retrieve_nationtable(city_link)
+
+            infrastructure = float(city_table[1][0][1].text.replace(",",""))
+            city_obj.infrastructure = infrastructure
+            land_area = city_table[1][1][0][1].text.split(" ")[0].replace(",","")
+            city_obj.land_area = land_area
+            population = int(city_table[1][0][3].text.split(" ")[0].replace(",",""))
+            city_obj.population = population
+
+            # print city_table[1][1][0][2][1].tag
+            # print city_table[1][1][0][2][1].text
+            date_string = city_table[1][1][0][3][1][0][3][3][1].text
+            day_founded = datetime.datetime.strptime(date_string, "%m/%d/%Y")
+            city_obj.founded = day_founded
+
+            cities.append(city_obj)
+        nation.cities = cities
+        nation.nation_id = nation_id
 
         for tr in nationtable.findall(".//tr"):
             self._print(3,">tr", len(tr))
