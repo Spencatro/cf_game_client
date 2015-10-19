@@ -7,7 +7,7 @@ Requirements
 - python 2.7
 - lxml
 - urllib
-- httplib2
+- requests
 
 Usage
 -------
