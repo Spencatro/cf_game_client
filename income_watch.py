@@ -1,7 +1,6 @@
 import logging
 import os
 from pw_client import PWClient
-from lxml import etree
 
 __author__ = 'shawkins'
 

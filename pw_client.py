@@ -10,6 +10,7 @@ import lxml.etree as ET
 import re
 import logging
 import sys
+import pymongo
 import requests
 
 __author__ = 'sxh112430'
@@ -1057,6 +1058,29 @@ class PWClient:
             'withsubmit': 'Withdraw'
         }
         self.__make_http_request(self.__root_url + "/alliance/id=1356&display=bank", body=body_data, request_type='POST')
+
+
+class LeanPWDB(object):
+    """ this will replace pnw_db.py eventually """
+    def __init__(self):
+        mongo_host = os.environ.get("mongodb_url")
+        mongo_port = int(os.environ.get("mongodb_port"))
+        mongo_dbname = os.environ.get("mongodb_dbname")
+        mongo_user = os.environ.get("mongodb_user")
+        mongo_password = os.environ.get("mongodb_password")
+
+        mongo = pymongo.MongoClient(host=mongo_host, port=mongo_port)
+        pnw_db = mongo[mongo_dbname]
+        pnw_db.authenticate(mongo_user, mongo_password)
+        self._db = pnw_db
+        self.market_watch_collection = self._db["market_watch"]
+
+    def add_market_watch_record(self, resource_dict):
+        today = datetime.datetime.now()
+        record = {"values": resource_dict,
+                  "time": today}
+        self.market_watch_collection.insert_one(record)
+
 
 
 if __name__ == "__main__":
