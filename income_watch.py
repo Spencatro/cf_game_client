@@ -63,8 +63,8 @@ for item_type in realstring_dict.keys():
     trade_num = int(trade_text.split("/")[0].replace(",",""))
     total_money_value += trade_num * totals[item_type]
 
-html_string += "\n<h1>Estimated total value collected this turn: "+"{:,}".format(total_money_value)+"</h1>\n"
-html_string += "\n<h1>Estimated total value to collect today: "+"{:,}".format(total_money_value * 12)+"</h1>\n"
+html_string += "\n<h1>Estimated total value collected this turn: "+money_string+"{:,}".format(total_money_value)+"</h1>\n"
+html_string += "\n<h1>Estimated total value to collect today: "+money_string+"{:,}".format(total_money_value * 12)+"</h1>\n"
 html_string += "<h4>Note: this value is calculated by taking the current 'buy' trading prices and multiplying them by the amount of resources collected this turn.</h4>"
 
 print html_string
