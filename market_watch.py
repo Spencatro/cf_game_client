@@ -100,9 +100,9 @@ for item_type in realstring_dict.keys():
     buy_diffp = (abs(averages[item_type]["buy"] - resource_dict[item_type]["buy"]) / (.5 * (averages[item_type]["buy"] + resource_dict[item_type]["buy"]))) * 100
     html_string += "<tr>" \
                    "<td>"+realstring_dict[item_type].capitalize()+"</td>" \
-                   "<td style='color="+sell_color+";'>"+str(current_sell)+"</td>" \
-                   "<td style='color="+sell_color+";'>"+str(average_sell)+"</td>" \
-                   "<td style='color="+sell_color+";'>"+str(sell_diffp)+"</td>" \
+                   "<td style='color:"+sell_color+";'>"+str(current_sell)+"</td>" \
+                   "<td style='color:"+sell_color+";'>"+str(average_sell)+"</td>" \
+                   "<td style='color:"+sell_color+";'>"+str(sell_diffp)+"</td>" \
                    "</tr>"
 html_string += "</table>"
 
