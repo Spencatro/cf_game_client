@@ -59,12 +59,12 @@ for item_type in realstring_dict.keys():
 
 # pwdb.add_market_watch_record(resource_dict)
 
-html_string = "<table>\n"
+html_string = "<table style='border: 1px solid black;'>\n"
 html_string += \
     "<tr>" \
     "<th>Resource</th>" \
     "<th>Current (low) sell price</th>" \
-    "<th>Current (low) sell price</th>" \
+    "<th>Average (low) sell price</th>" \
     "<th>Percent difference</th>" \
     "</tr>\n"
 
