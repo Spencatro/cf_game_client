@@ -57,7 +57,7 @@ for item_type in realstring_dict.keys():
     trade_num = int(trade_text.split("/")[0].replace(",",""))
     resource_dict[item_type]["sell"] = trade_num
 
-# pwdb.add_market_watch_record(resource_dict)
+pwdb.add_market_watch_record(resource_dict)
 
 html_string = "<table style='border: 1px solid black;'>\n"
 html_string += \
