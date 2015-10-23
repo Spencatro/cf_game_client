@@ -2,6 +2,7 @@ import logging
 import os
 from colour import Color
 from pw_client import PWClient, LeanPWDB
+import pymongo
 import plotly.plotly as py
 import plotly.graph_objs as go
 import plotly.tools as tls
@@ -81,11 +82,12 @@ for item_type in realstring_dict.keys():
     average_sell = averages[item_type]["sell"]
     sell_diffp = (abs(averages[item_type]["sell"] - resource_dict[item_type]["sell"]) / (.5 * (averages[item_type]["sell"] + resource_dict[item_type]["sell"]))) * 100
     gradient_index = 0
-
     if sell_diffp > 25:
         gradient_index = 99
     else:
-        gradient_index = int(sell_diffp / 25.0) - 1
+        gradient_index = int(100 * float(sell_diffp) / 25.0)
+        if gradient_index >= 100:
+            gradient_index = 99
 
     if average_sell > current_sell:
         sell_color = str(blue_gradient[gradient_index])
@@ -108,11 +110,13 @@ html_string += "</table>"
 
 if len(buys_higher_than_avg_sells.keys()) > 0:
     for key in buys_higher_than_avg_sells.keys():
-        html_string += "<h3>There is a buy offer for", key, "("+str(buys_higher_than_avg_sells[key])+") that exceeds the average sell price! Take this trade!</h3>"
+        html_string += "<h3>There is a buy offer for"+str(key)+ "("+str(buys_higher_than_avg_sells[key])+") that exceeds the average sell price! Take this trade!</h3>"
 
 previous_records = []
 skipped_one = False
-for rec in pwdb.market_watch_collection.find().limit(200):
+records = list(pwdb.market_watch_collection.find().sort('_id', pymongo.DESCENDING).limit(200))
+records.reverse()
+for rec in records:
     if not skipped_one:
         skipped_one = True
         continue
@@ -150,5 +154,3 @@ for item_type in realstring_dict.keys():
     plot_url = py.plot(fig, filename=item_type+"_build_"+str(os.environ.get("BUILD_NUMBER")), auto_open=False)
     plot_embed = tls.get_embed(plot_url)
     print plot_embed
-
-
