@@ -59,7 +59,7 @@ for item_type in realstring_dict.keys():
 
 pwdb.add_market_watch_record(resource_dict)
 
-html_string = "<table style='border: 1px solid black;'>\n"
+html_string = "<table border='1' rules='all'>\n"
 html_string += \
     "<tr>" \
     "<th>Resource</th>" \
@@ -91,7 +91,7 @@ for item_type in realstring_dict.keys():
         sell_color = str(blue_gradient[gradient_index])
         sell_diffp *= -1
     else:
-        sell_color = str(blue_gradient[gradient_index])
+        sell_color = str(orange_gradient[gradient_index])
 
     current_buy = resource_dict[item_type]["buy"]
     if current_buy > average_sell:
