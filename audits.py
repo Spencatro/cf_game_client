@@ -29,13 +29,20 @@ five_days_ago = pwc.get_current_date_in_datetime() - timedelta(days=5)
 
 records = pwc.get_alliance_bank_records_from_id(1356, records_since_datetime=five_days_ago)
 
+nation_totals = {}
+for nation in pwc.get_list_of_alliance_members_from_alliance_name("Charming Friends"):
+    nation_totals[nation.nation_id] = 0
+
 totals = {}
 for record in records:
+
     for resource_key in record['resources'].keys():
         if resource_key not in totals.keys():
             totals[resource_key] = 0
         if record["reciever"] == "1356":  # if it's an incoming transaction to the bank
             totals[resource_key] -= record['resources'][resource_key]
+        elif record["reciever"] not in nation_totals.keys():  # if it's an incoming transaction to the bank, or outgoing to non-alliance member
+            continue
         else:
             totals[resource_key] += record['resources'][resource_key]
 
@@ -71,18 +78,13 @@ html_string += "<h4>Note: this value is calculated by taking the current 'buy' t
 
 print html_string
 
-nation_totals = {}
-for nation in pwc.get_list_of_alliance_members_from_alliance_name("Charming Friends"):
-    nation_totals[nation.nation_id] = 0
-
 for record in records:
-    if record["reciever"] not in nation_totals.keys():  # if it's an incoming transaction to the bank, or outgoing to non-alliance member
-        continue
-    if record["reciever"] == "1356":
-        for resource_key in record["resources"].keys():
+    for resource_key in record["resources"].keys():
+        if record["reciever"] == "1356":
             nation_totals[record["sender"]] -= trade_values[resource_key] * record['resources'][resource_key]
-    else:
-        for resource_key in record["resources"].keys():
+        elif record["reciever"] not in nation_totals.keys():  # if it's an incoming transaction to the bank, or outgoing to non-alliance member
+            continue
+        else:
             nation_totals[record['reciever']] += trade_values[resource_key] * record['resources'][resource_key]
 
 nation_keys = nation_totals.keys()
