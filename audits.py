@@ -41,7 +41,7 @@ for record in records:
             totals[resource_key] = 0
         if record["reciever"] == "1356":  # if it's an incoming transaction to the bank
             totals[resource_key] -= record['resources'][resource_key]
-        elif record["reciever"] not in nation_totals.keys():  # if it's an incoming transaction to the bank, or outgoing to non-alliance member
+        elif record["reciever"] not in nation_totals.keys() and record["sender"] not in nation_totals.keys():  # if it's an incoming transaction to the bank, or outgoing to non-alliance member
             continue
         else:
             totals[resource_key] += record['resources'][resource_key]
@@ -82,7 +82,7 @@ for record in records:
     for resource_key in record["resources"].keys():
         if record["reciever"] == "1356":
             nation_totals[record["sender"]] -= trade_values[resource_key] * record['resources'][resource_key]
-        elif record["reciever"] not in nation_totals.keys():  # if it's an incoming transaction to the bank, or outgoing to non-alliance member
+        elif record["reciever"] not in nation_totals.keys() and record["sender"] not in nation_totals.keys():  # if it's an incoming transaction to the bank, or outgoing to non-alliance member
             continue
         else:
             nation_totals[record['reciever']] += trade_values[resource_key] * record['resources'][resource_key]
