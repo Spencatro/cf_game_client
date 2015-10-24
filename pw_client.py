@@ -929,6 +929,7 @@ class PWClient:
         :return: list of tax records
         """
         url = self.__root_url + "/alliance/id="+str(alliance_id)+"&display=banktaxes"
+        nationtable_idx = 0
 
         num_records = 100
 
@@ -960,7 +961,7 @@ class PWClient:
             parser = ET.XMLParser(recover=True)
             tree = ET.fromstring(content, parser=parser)
             nationtables = tree.findall(".//table[@class='nationtable']")
-            nationtable = nationtables[0]
+            nationtable = nationtables[nationtable_idx]
 
             records_left -= max_window
             window_start += max_window
@@ -996,6 +997,95 @@ class PWClient:
                 if records_since_datetime is not None and transaction_date < records_since_datetime:
                     return records # we already went too far, stop and return
                 records.append(tax_record)
+            # if only_last_turn:
+                # records = records[:num_records]
+        return records
+
+    def get_alliance_bank_records_from_id(self, alliance_id, records_since_datetime, min_records=50):
+        """
+
+        :param alliance_id: a number representing an alliance id
+        :param only_last_turn: if you only want to look at tax records from the most recent turn
+        :param records_since_datetime: a date to go back since. Should be game-time biased!
+        :return: list of tax records
+        """
+        url = self.__root_url + "/alliance/id="+str(alliance_id)+"&display=bank"
+        nationtable_idx = 3
+
+        # estimate how many records we'll need
+        num_records = min_records
+        self._print(3, "searching for records since ", records_since_datetime)
+
+        records = []
+
+        window_start = 0
+        max_window = min(num_records, 50)
+
+        last_datetime = None
+
+        while last_datetime is None or last_datetime > records_since_datetime:
+            self._print(1, "Retrieving nationtable for:",url)
+            r,content = self.__make_http_request(url, body={'maximum': max_window, 'minimum':window_start}, request_type='POST')
+            parser = ET.XMLParser(recover=True)
+            tree = ET.fromstring(content, parser=parser)
+            nationtables = tree.findall(".//table[@class='nationtable']")
+            nationtable = nationtables[nationtable_idx]
+
+            window_start += max_window
+
+            for tr in nationtable.findall(".//tr"):
+                has_note = len(tr[1].findall(".//img[@src='https://politicsandwar.com/img/icons/16/note.png']")) > 0
+                tax_record = {}
+                if tr[1].text == "Date":
+                    continue
+                transaction_date_str = tr[1].text
+                transaction_date = datetime.datetime.strptime(transaction_date_str.strip(), "%m/%d/%Y %I:%M %p")
+                try:
+                    if has_note:
+                        tax_record["sender"] = nation_id = _get_param_from_url(tr[1][1][0].attrib['href'], "id")
+                        tax_record["reciever"] = _get_param_from_url(tr[1][2][0].attrib['href'], "id")
+                        tax_record["banker"] = _get_param_from_url(tr[1][3][0].attrib['href'], "id")
+                    else:
+                        tax_record["sender"] = nation_id = _get_param_from_url(tr[2][0].attrib['href'], "id")
+                        tax_record["reciever"] = _get_param_from_url(tr[3][0].attrib['href'], "id")
+                        tax_record["banker"] = _get_param_from_url(tr[4][0].attrib['href'], "id")
+                    tax_record["date"] = transaction_date
+                    tax_record['resources'] = {}
+                    if has_note:
+                        tax_record['resources']["money"] = float(tr[1][4].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["food"] = float(tr[1][5].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["coal"] = float(tr[1][6].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["oil"] = float(tr[1][7].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["uranium"] = float(tr[1][8].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["lead"] = float(tr[1][9].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["iron"] = float(tr[1][10].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["bauxite"] = float(tr[1][11].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["gasoline"] = float(tr[1][12].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["munition"] = float(tr[1][13].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["steel"] = float(tr[1][14].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["aluminum"] = float(tr[1][15].text.strip().replace("$","").replace(",",""))
+                    else:
+                        tax_record['resources']["money"] = float(tr[5].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["food"] = float(tr[6].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["coal"] = float(tr[7].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["oil"] = float(tr[8].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["uranium"] = float(tr[9].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["lead"] = float(tr[10].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["iron"] = float(tr[11].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["bauxite"] = float(tr[12].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["gasoline"] = float(tr[13].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["munition"] = float(tr[14].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["steel"] = float(tr[15].text.strip().replace("$","").replace(",",""))
+                        tax_record['resources']["aluminum"] = float(tr[16].text.strip().replace("$","").replace(",",""))
+
+                    if transaction_date < records_since_datetime:
+                        return records # we already went too far, stop and return
+                    records.append(tax_record)
+
+                except IndexError:
+                    # just skip if it's gonna bitch about stuff, probably me trying to hack lel
+                    if transaction_date < records_since_datetime:
+                        return records  # we already went too far, stop and return
             # if only_last_turn:
                 # records = records[:num_records]
         return records
