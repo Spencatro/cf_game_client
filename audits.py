@@ -50,17 +50,6 @@ for key in totals.keys():
 
 html_string += "</table>"
 
-html_string += "<h1>Estimated total amounts collected next day</h1>\n"
-html_string += "<table>\n"
-
-for key in totals.keys():
-    if key == "money":
-        html_string += "<tr>\n<td>\n"+money_string+"\n</td>\n<td>\n"+"{:,}".format(totals[key]*12)+"\n</td>\n</tr>\n"
-    else:
-        html_string += "<tr>\n<td>\n<img src='"+img_dict[key]+"'>\n</td>\n<td>\n"+"{:,}".format(totals[key]*12)+"\n</td>\n</tr>\n"
-
-html_string += "</table>"
-
 total_money_value = totals['money']
 
 trade_values = {}
