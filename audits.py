@@ -87,10 +87,14 @@ for nation in pwc.get_list_of_alliance_members_from_alliance_name("Charming Frie
     nation_totals[nation.nation_id] = 0
 
 for record in records:
-    if record["reciever"] == "1356" or record["reciever"] not in nation_totals.keys():  # if it's an incoming transaction to the bank, or outgoing to non-alliance member
+    if record["reciever"] not in nation_totals.keys():  # if it's an incoming transaction to the bank, or outgoing to non-alliance member
         continue
-    for resource_key in record["resources"].keys():
-        nation_totals[record['reciever']] += trade_values[resource_key] * record['resources'][resource_key]
+    if record["reciever"] == "1356":
+        for resource_key in record["resources"].keys():
+            nation_totals[record["sender"]] -= trade_values[resource_key] * record['resources'][resource_key]
+    else:
+        for resource_key in record["resources"].keys():
+            nation_totals[record['reciever']] += trade_values[resource_key] * record['resources'][resource_key]
 
 nation_keys = nation_totals.keys()
 
