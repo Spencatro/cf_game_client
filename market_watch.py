@@ -151,11 +151,11 @@ for item_type in realstring_dict.keys():
 
     if average_sell > current_sell:
         sell_color = str(blue_gradient[gradient_index])
-        if sell_diffp >= 5.0:
+        if sell_diffp >= 25.0:
             post_good_buy(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
         sell_diffp *= -1
     else:
-        if sell_diffp >= 5.0:
+        if sell_diffp >= 25.0:
             post_good_sell(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
         sell_color = str(orange_gradient[gradient_index])
 
