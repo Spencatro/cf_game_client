@@ -163,16 +163,24 @@ for item_type in realstring_dict.keys():
     if average_sell > current_sell:
         sell_color = str(blue_gradient[gradient_index])
         if sell_diffp >= 25.0:
-            post_good_buy(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
+            if pwdb.increment_buy_counter_for_type(item_type):
+                post_good_buy(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
+        else:
+            pwdb.reset_buy_counter(item_type)
         sell_diffp *= -1
     else:
         if sell_diffp >= 25.0:
-            post_good_sell(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
+            if pwdb.increment_sell_counter_for_type(item_type):
+                post_good_sell(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
+        else:
+            pwdb.reset_sell_counter(item_type)
         sell_color = str(orange_gradient[gradient_index])
 
     current_buy = resource_dict[item_type]["buy"]
     if current_buy > average_sell:
         buys_higher_than_avg_sells[item_type] = current_buy
+    else:
+        buys_higher_than_avg_sells[item_type] = -1
 
     buy_diffp = (abs(averages[item_type]["buy"] - resource_dict[item_type]["buy"]) / (.5 * (averages[item_type]["buy"] + resource_dict[item_type]["buy"]))) * 100
     html_string += "<tr>" \
@@ -185,12 +193,15 @@ html_string += "</table>"
 print html_string
 
 # Print buy anomalies
-if len(buys_higher_than_avg_sells.keys()) > 0:
-    for key in buys_higher_than_avg_sells.keys():
+for key in buys_higher_than_avg_sells.keys():
+    if buys_higher_than_avg_sells[key] < 0:
+        pwdb.reset_buy_offer_counter(key)
+    else:
         html_string += "<h3>There is a buy offer for"+str(key)+ "("+str(buys_higher_than_avg_sells[key])+") that exceeds the average sell price! Take this trade!</h3>"
         good = realstring_dict[key]
         good_url = make_trade_url(good, ascending=False, sell=False)
-        post_good_buy_offer(good, good_url, averages[key]["sell"], buys_higher_than_avg_sells[key])
+        if pwdb.increment_buy_offer_counter_for_type(key):
+            post_good_buy_offer(good, good_url, averages[key]["sell"], buys_higher_than_avg_sells[key])
 
 for key in plot_embeds:
     print plot_embeds[key]
