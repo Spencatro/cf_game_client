@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+import datetime
 
 __author__ = 'shawkins'
 import logging
@@ -25,7 +25,7 @@ pwc = PWClient(USERNAME, PASS, logger=logger)
 
 img_url = "https://politicsandwar.com/img/resources/"
 
-five_days_ago = pwc.get_current_date_in_datetime() - timedelta(days=5)
+five_days_ago = pwc.get_current_date_in_datetime() - datetime.timedelta(days=5)
 
 records = pwc.get_alliance_bank_records_from_id(1356, records_since_datetime=five_days_ago)
 
@@ -89,6 +89,11 @@ for record in records:
 
 nation_keys = nation_totals.keys()
 
+# get the start of the week
+today = datetime.date.today()
+last_monday = today + datetime.timedelta(days=-today.weekday())
+month_day_year = last_monday.strftime("%m.%d.%Y")
+
 x = []
 y = []
 titles = []
@@ -115,5 +120,5 @@ layout = go.Layout(
     showlegend=True
 )
 fig = go.Figure(data=data, layout=layout)
-plot_url = py.plot(fig, filename="audits_build_"+str(os.environ.get("BUILD_NUMBER")), auto_open=False)
+plot_url = py.plot(fig, filename="PNW_Audits_weekof_"+month_day_year+"/audits_build_"+str(os.environ.get("BUILD_NUMBER")), auto_open=False)
 print tls.get_embed(plot_url)
