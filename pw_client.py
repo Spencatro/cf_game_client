@@ -1164,6 +1164,7 @@ class LeanPWDB(object):
         pnw_db.authenticate(mongo_user, mongo_password)
         self._db = pnw_db
         self.market_watch_collection = self._db["market_watch"]
+        self.market_watch_notification_collection = self._db["market_watch_notifications"]
 
     def add_market_watch_record(self, resource_dict):
         today = datetime.datetime.now()
@@ -1171,6 +1172,48 @@ class LeanPWDB(object):
                   "time": today}
         self.market_watch_collection.insert_one(record)
 
+    def get_notification_counts(self):
+        return self.market_watch_notification_collection.find()[-1]
+
+    def _increment_notification_for_type(self, item_type, record_type):
+        n_record = self.get_notification_counts()
+        n_id = n_record["_id"]
+        n_record[item_type][record_type] += 1
+        count = n_record[item_type][record_type]
+        okay_to_notify = count <= 3
+        self.market_watch_notification_collection.update({"_id": n_id}, n_record)
+        return okay_to_notify
+
+    def increment_buy_counter_for_type(self, item_type):
+        return self._increment_notification_for_type(item_type, "buy")
+
+    def increment_sell_counter_for_type(self, item_type):
+        return self._increment_notification_for_type(item_type, "sell")
+
+    def increment_buy_offer_counter_for_type(self, item_type):
+        return self._increment_notification_for_type(item_type, "buy_offer")
+
+    def init_new_counter(self, realstring_dict):
+        new_record = {}
+        for key in realstring_dict.keys():
+            val = realstring_dict[key]
+            new_record[val] = {"buy": 0, "sell": 0, "buy_offer": 0}
+        self.market_watch_notification_collection.insert_one(new_record)
+
+    def _reset_counter(self, item_type, record_type):
+        n_record = self.get_notification_counts()
+        n_id = n_record["_id"]
+        n_record[item_type][record_type] = 0
+        self.market_watch_notification_collection.update({"_id": n_id}, n_record)
+
+    def reset_buy_counter(self, item_type):
+        self._reset_counter(item_type, "buy")
+
+    def reset_sell_counter(self, item_type):
+        self._reset_counter(item_type, "buy")
+
+    def reset_buy_offer_counter(self, item_type):
+        self._reset_counter(item_type, "buy_offer")
 
 
 if __name__ == "__main__":
