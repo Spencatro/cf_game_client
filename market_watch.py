@@ -1,8 +1,10 @@
 import logging
 import os
 from colour import Color
+import datetime
 from pw_client import PWClient, LeanPWDB
 import pymongo
+from bson.objectid import ObjectId
 import plotly.plotly as py
 import plotly.graph_objs as go
 import plotly.tools as tls
@@ -83,18 +85,22 @@ skipped_one = False
 records = list(pwdb.market_watch_collection.find().sort('_id', pymongo.DESCENDING).limit(200))
 records.reverse()
 for rec in records:
+    oid = ObjectId(rec["_id"])
+    # yyyy-mm-dd HH
+    oid_time = oid.generation_time.strftime("%Y-%m-%d %H:%M:%S")
     if not skipped_one:
         skipped_one = True
         continue
-    turn_record = {}
+    turn_record = {"turn_date": oid_time}
     for item_type in realstring_dict.keys():
         average_upto_record = pwdb.market_watch_collection.aggregate([{"$match": {"_id": {"$lt": rec["_id"]}}}, {"$group": {"_id": None, "sell": {"$avg": "$values."+item_type+".sell"}, "buy": {"$avg": "$values."+item_type+".buy"}}}]).next()
         turn_record[item_type] = {"avg": average_upto_record, "turn": rec["values"][item_type]}
     previous_records.append(turn_record)
 
 for item_type in realstring_dict.keys():
-    t1x = range(len(previous_records))
-    t1y = [record[item_type]["avg"]["sell"] for record in previous_records]
+
+    t1x = [previous_records[-1]["turn_date"]]
+    t1y = [previous_records[-1][item_type]["avg"]["sell"]]
     trace1 = go.Scatter(x=t1x,
                         y=t1y,
                         mode='lines+markers',
@@ -114,8 +120,13 @@ for item_type in realstring_dict.keys():
         title=(realstring_dict[item_type] + ': price and average over time').capitalize(),
         showlegend=True
     )
+    # get the start of the week
+    today = datetime.date.today()
+    last_monday = today + datetime.timedelta(days=-today.weekday())
+    month_day_year = last_monday.strftime("%m.%d.%Y")
+
     fig = go.Figure(data=data, layout=layout)
-    plot_url = py.plot(fig, filename=item_type+"_build_"+str(os.environ.get("BUILD_NUMBER")), auto_open=False)
+    plot_url = py.plot(fig, filename="PNWMarketWatch_weekof_"+month_day_year+"/"+item_type, auto_open=False, fileopt='extend')
     plot_embed = tls.get_embed(plot_url)
     plot_embeds[item_type] = plot_embed
     plot_urls[item_type] = plot_url
