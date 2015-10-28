@@ -1173,7 +1173,7 @@ class LeanPWDB(object):
         self.market_watch_collection.insert_one(record)
 
     def get_notification_counts(self):
-        return self.market_watch_notification_collection.find()[-1]
+        return self.market_watch_notification_collection.find().sort({"_id": -1})[0]
 
     def _increment_notification_for_type(self, item_type, record_type):
         n_record = self.get_notification_counts()
