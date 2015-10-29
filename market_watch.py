@@ -3,7 +3,6 @@ import os
 from colour import Color
 import datetime
 from pw_client import PWClient, LeanPWDB
-import pymongo
 from bson.objectid import ObjectId
 import plotly.plotly as py
 import plotly.graph_objs as go
@@ -75,32 +74,25 @@ for item_type in realstring_dict.keys():
     trade_num = int(trade_text.split("/")[0].replace(",",""))
     resource_dict[item_type]["sell"] = trade_num
 
-pwdb.add_market_watch_record(resource_dict)
+result = pwdb.add_market_watch_record(resource_dict)
+oid = ObjectId(result.inserted_id)
+oid_datetime = oid.generation_time.strftime("%Y-%m-%d %H:%M:%S")
+
+averages = {}
+for item_type in realstring_dict.keys():
+    res = pwdb.market_watch_collection.aggregate([{"$group": {"_id": None, "sell": {"$avg": "$values."+item_type+".sell"}, "buy": {"$avg": "$values."+item_type+".buy"}}}])
+    values = res.next()
+    averages[item_type] = {"sell": values["sell"], "buy": values["buy"]}
 
 # Generate charts
 plot_embeds = {}
 plot_urls = {}
-previous_records = []
-skipped_one = False
-records = list(pwdb.market_watch_collection.find().sort('_id', pymongo.DESCENDING).limit(200))
-records.reverse()
-for rec in records:
-    oid = ObjectId(rec["_id"])
-    # yyyy-mm-dd HH
-    oid_time = oid.generation_time.strftime("%Y-%m-%d %H:%M:%S")
-    if not skipped_one:
-        skipped_one = True
-        continue
-    turn_record = {"turn_date": oid_time}
-    for item_type in realstring_dict.keys():
-        average_upto_record = pwdb.market_watch_collection.aggregate([{"$match": {"_id": {"$lt": rec["_id"]}}}, {"$group": {"_id": None, "sell": {"$avg": "$values."+item_type+".sell"}, "buy": {"$avg": "$values."+item_type+".buy"}}}]).next()
-        turn_record[item_type] = {"avg": average_upto_record, "turn": rec["values"][item_type]}
-    previous_records.append(turn_record)
 
 for item_type in realstring_dict.keys():
 
-    t1x = [previous_records[-1]["turn_date"]]
-    t1y = [previous_records[-1][item_type]["avg"]["sell"]]
+    t1x = [oid_datetime]
+    t1y = [averages[item_type]["sell"]]
+    t2y = [resource_dict[item_type]["sell"]]
     trace1 = go.Scatter(x=t1x,
                         y=t1y,
                         mode='lines+markers',
@@ -109,7 +101,7 @@ for item_type in realstring_dict.keys():
                             shape='spline'
                         ))
     trace2 = go.Scatter(x=t1x,
-                        y=[record[item_type]["turn"]["sell"] for record in previous_records],
+                        y=t2y,
                         mode='lines+markers',
                         name="Current price at turn",
                         line=dict(
@@ -142,11 +134,7 @@ html_string += \
 
 buys_higher_than_avg_sells = {}
 
-averages = {}
 for item_type in realstring_dict.keys():
-    res = pwdb.market_watch_collection.aggregate([{"$group": {"_id": None, "sell": {"$avg": "$values."+item_type+".sell"}, "buy": {"$avg": "$values."+item_type+".buy"}}}])
-    values = res.next()
-    averages[item_type] = {"sell": values["sell"], "buy": values["buy"]}
     # Make judgements on sells
 
     current_sell = resource_dict[item_type]["sell"]

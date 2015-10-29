@@ -1170,7 +1170,7 @@ class LeanPWDB(object):
         today = datetime.datetime.now()
         record = {"values": resource_dict,
                   "time": today}
-        self.market_watch_collection.insert_one(record)
+        return self.market_watch_collection.insert_one(record)
 
     def get_notification_counts(self):
         return self.market_watch_notification_collection.find().sort("_id", pymongo.DESCENDING)[0]
