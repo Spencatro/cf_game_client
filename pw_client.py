@@ -1201,8 +1201,7 @@ class LeanPWDB(object):
     def init_new_counter(self, realstring_dict):
         new_record = {}
         for key in realstring_dict.keys():
-            val = realstring_dict[key]
-            new_record[val] = {"buy": 0, "last_buy_percentage": 0, "sell": 0, "last_sell_percentage": 0, "buy_offer": 0, "last_buy_offer_percentage": 0}
+            new_record[key] = {"buy": 0, "last_buy_percentage": 0, "sell": 0, "last_sell_percentage": 0, "buy_offer": 0, "last_buy_offer_percentage": 0}
         self.market_watch_notification_collection.insert_one(new_record)
 
     def _reset_counter(self, item_type, record_type):
