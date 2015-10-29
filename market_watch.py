@@ -163,14 +163,14 @@ for item_type in realstring_dict.keys():
     if average_sell > current_sell:
         sell_color = str(blue_gradient[gradient_index])
         if sell_diffp >= 25.0:
-            if pwdb.increment_buy_counter_for_type(item_type):
+            if pwdb.increment_buy_counter_for_type(item_type, sell_diffp):
                 post_good_buy(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
         else:
             pwdb.reset_buy_counter(item_type)
         sell_diffp *= -1
     else:
         if sell_diffp >= 25.0:
-            if pwdb.increment_sell_counter_for_type(item_type):
+            if pwdb.increment_sell_counter_for_type(item_type, sell_diffp):
                 post_good_sell(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
         else:
             pwdb.reset_sell_counter(item_type)

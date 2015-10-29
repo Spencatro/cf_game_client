@@ -1175,35 +1175,42 @@ class LeanPWDB(object):
     def get_notification_counts(self):
         return self.market_watch_notification_collection.find().sort("_id", pymongo.DESCENDING)[0]
 
-    def _increment_notification_for_type(self, item_type, record_type):
+    def _increment_notification_for_type(self, item_type, record_type, percentage):
+        percentage_key = "last_"+record_type+"_percentage"
         n_record = self.get_notification_counts()
         n_id = n_record["_id"]
         n_record[item_type][record_type] += 1
+        last_percentage = n_record[percentage_key]
+        if abs(abs(last_percentage) - abs(percentage)) > 5:
+            n_record[item_type][record_type] = 0
+            n_record[percentage_key] = percentage
         count = n_record[item_type][record_type]
         okay_to_notify = count <= 3
         self.market_watch_notification_collection.update({"_id": n_id}, n_record)
         return okay_to_notify
 
-    def increment_buy_counter_for_type(self, item_type):
-        return self._increment_notification_for_type(item_type, "buy")
+    def increment_buy_counter_for_type(self, item_type, percentage):
+        return self._increment_notification_for_type(item_type, "buy", percentage)
 
-    def increment_sell_counter_for_type(self, item_type):
-        return self._increment_notification_for_type(item_type, "sell")
+    def increment_sell_counter_for_type(self, item_type, percentage):
+        return self._increment_notification_for_type(item_type, "sell", percentage)
 
     def increment_buy_offer_counter_for_type(self, item_type):
-        return self._increment_notification_for_type(item_type, "buy_offer")
+        return self._increment_notification_for_type(item_type, "buy_offer", 0)
 
     def init_new_counter(self, realstring_dict):
         new_record = {}
         for key in realstring_dict.keys():
             val = realstring_dict[key]
-            new_record[val] = {"buy": 0, "sell": 0, "buy_offer": 0}
+            new_record[val] = {"buy": 0, "last_buy_percentage": 0, "sell": 0, "last_sell_percentage": 0, "buy_offer": 0, "last_buy_offer_percentage": 0}
         self.market_watch_notification_collection.insert_one(new_record)
 
     def _reset_counter(self, item_type, record_type):
+        percentage_key = "last_"+record_type+"_percentage"
         n_record = self.get_notification_counts()
         n_id = n_record["_id"]
         n_record[item_type][record_type] = 0
+        n_record[item_type][percentage_key] = 0
         self.market_watch_notification_collection.update({"_id": n_id}, n_record)
 
     def reset_buy_counter(self, item_type):
