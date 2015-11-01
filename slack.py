@@ -13,7 +13,7 @@ def post_good_buy(good, good_url, average_price, current_price, image_url):
 
     test_attachment = {
         "color": "#2883BD",
-        "text": "",
+        "text": "There's an extra spicy "+good.lower()+" BUY deal on the market right now!",
         "title": "PNW Market: " + good.capitalize(),
         "title_link": good_url,
         "image_url": image_url,
@@ -36,13 +36,13 @@ def post_good_buy(good, good_url, average_price, current_price, image_url):
         ]
 
     }
-    post_to_market_channel("There's an extra spicy "+good.lower()+" BUY deal on the market right now!", attachments=json.dumps([test_attachment]))
+    post_to_market_channel(good.capitalize()+" BUY!", attachments=json.dumps([test_attachment]))
 
 
 def post_good_sell(good, good_url, average_price, current_price, image_url):
     test_attachment = {
         "color": "#FF7B0C",
-        "text": "",
+        "text": "There's an extra spicy "+good.lower()+" SELL deal on the market right now!",
         "title": "PNW Market: "+good.capitalize(),
         "title_link": good_url,
         "image_url": image_url,
@@ -65,14 +65,14 @@ def post_good_sell(good, good_url, average_price, current_price, image_url):
         ]
 
     }
-    post_to_market_channel("There's an extra spicy "+good.lower()+" SELL deal on the market right now!", attachments=json.dumps([test_attachment]))
+    post_to_market_channel(good.capitalize()+" SELL!", attachments=json.dumps([test_attachment]))
 
 
 def post_good_buy_offer(good, good_url, average_sell_price, current_buy_price):
 
     test_attachment = {
         "color": "#2883BD",
-        "text": "",
+        "text": "There's a 'buy' offer for "+good.lower()+" that is higher than the average 'sell' offer! Take this deal!",
         "title": "PNW Market: " + good.capitalize(),
         "title_link": good_url,
         "fields": [
@@ -94,9 +94,10 @@ def post_good_buy_offer(good, good_url, average_sell_price, current_buy_price):
         ]
 
     }
-    post_to_market_channel("There's a 'buy' offer for "+good.lower()+" that is higher than the average 'sell' offer! Take this deal!", attachments=json.dumps([test_attachment]))
+    post_to_market_channel(good.capitalize()+" BUY Anomaly!", attachments=json.dumps([test_attachment]))
 
 
 def post_to_market_channel(message, attachments=None):
     sc = slackclient.SlackClient(os.environ.get("slack_token"))
     sc.api_call("chat.postMessage", channel=MARKET_CHANNEL, text=message, username="ROBIE The Robot Bank!", icon_url="http://www.theoldrobots.com/images6/money5.JPG", attachments=attachments)
+
