@@ -6,6 +6,6 @@ app = Flask(__name__)
 app.debug = True  # TODO: unset this after release!
 
 
-@app.route('/')
+@app.route('/', methods=['POST'])
 def hello_world():
-    return jsonify({"hello": "world"})
+    return jsonify({"text": "hello, human"})
