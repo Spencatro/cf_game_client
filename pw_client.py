@@ -1182,7 +1182,7 @@ class LeanPWDB(object):
         n_record[item_type][record_type] += 1
         last_percentage = n_record[item_type][percentage_key]
         if abs(abs(last_percentage) - abs(percentage)) > 10:
-            n_record[item_type][record_type] = 0
+            n_record[item_type][record_type] = 1
             n_record[item_type][percentage_key] = percentage
         count = n_record[item_type][record_type]
         okay_to_notify = count <= 1
