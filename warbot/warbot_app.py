@@ -109,8 +109,8 @@ def hello_world():
     verify_token(token)
     originating_user_id = request.form.get("user_id")
     originating_user_name = request.form.get("user_name")
-    message_body = request.form.get("text")
-    trigger = request.form.get("trigger_word")
+    message_body = request.form.get("text").lower()
+    trigger = request.form.get("trigger_word").lower()
 
     action = remove_trigger(trigger, message_body)
     if END_OF_BEIGE.match(action):
