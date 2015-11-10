@@ -56,7 +56,7 @@ def notify_end_of_beige(slack_uid, slack_user_name, action):
             continue
         wardb.create_personal_beige_watch_record(slack_uid, nation_id, nation.name, nation.beige_turns_left)
         nation_names.append(nation.name)
-    text = {"text": "OK, " + str(slack_user_name) + ", I'll notify you when " + ", ".join(nation_names) + " leave beige"}
+    text = "OK, " + str(slack_user_name) + ", I'll notify you when " + ", ".join(nation_names) + " leaves beige"
     return jsonify({"text": text})
 
 
@@ -106,7 +106,7 @@ def hello_world():
     elif WATCH_MY_WAR.match(action):
         return watch_my_war(originating_user_id, originating_user_name, action)
     elif SHOW_ME_THE_PIPELINE.match(action):
-        return show_pipeline(originating_user_name, action)
+        return show_pipeline(action)
     elif HELP.match(action):
         return get_help(action)
 
