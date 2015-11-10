@@ -17,5 +17,3 @@ class WarbotDB(DBWrapper):
             record["state"] = "notify"
         if self.beige_checks.find({"requesting_user_slack_id": slack_uid, "nation_id": nation_id}) is None:
             self.beige_checks.insert_one(record)
-            return True
-        return False

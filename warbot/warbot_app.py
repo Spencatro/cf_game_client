@@ -50,22 +50,20 @@ def notify_end_of_beige(slack_uid, slack_user_name, action):
     nation_ids = [int(s) for s in action.split() if s.isdigit()]
     nations_added = []
     not_in_beige = []
-    result = None
     for nation_id in nation_ids:
         try:
             nation = pwc.get_nation_obj_from_ID(nation_id)
         except:
             continue
         if nation.beige_turns_left is not None:
-            result = result or wardb.create_personal_beige_watch_record(slack_uid, nation_id, nation.name, nation.beige_turns_left)
+            wardb.create_personal_beige_watch_record(slack_uid, nation_id, nation.name, nation.beige_turns_left)
             nations_added.append(nation.name)
         else:
             not_in_beige.append(nation.name)
-    text = ""
     if len(nations_added) > 0:
         text = "OK, " + str(slack_user_name) + ", I'll notify you when " + ", ".join(nations_added) + " leaves beige"
-    elif result == False:
-        text = "I am already watching nations " + ", ".join(nations_added) + " for you! I promise I'll keep you in the loop!"
+    else:
+        text = "I didn't find any nations to add in your query! Try `warbot help` if you need!"
     if len(not_in_beige) > 0:
         text += "\nbtw, it looks like " + ", ".join(not_in_beige) + " aren't in beige ya dingus"
 
