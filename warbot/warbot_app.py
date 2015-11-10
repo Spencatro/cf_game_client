@@ -111,3 +111,7 @@ def hello_world():
         return get_help(action)
 
     return error_message()
+
+
+if __name__ == '__main__':
+    app.run(debug=True, port=8818)
