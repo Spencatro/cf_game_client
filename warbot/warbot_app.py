@@ -49,19 +49,19 @@ def show_pipeline(action):
 def get_help(action):
 
     helpstring = "Currently available commands:\n" \
-                 "Help: shows this message! Examples:" \
-                 "      'Warbot, help me!'" \
-                 "      'Warbot, help'" \
-                 "War notifier: notifies you when you will have enough points in a war for a ground battle. Examples:" \
-                 "      'Warbot, notify me about war [war id number]'" \
-                 "      'Warbot, war [war id number]'" \
-                 "Beige watcher: notifies you when a certain nation is about to leave beige. Examples:" \
-                 "      'Warbot, tell me when beige ends for [nation id number]'" \
-                 "      'Warbot, tell me when I can fight [nation id number]'" \
-                 "      'Warbot, beige [nation id number]'" \
-                 "Show pipeline: shows nations in the current pipeline. Examples:" \
-                 "      'Warbot, show me the pipeline'" \
-                 "      'Warbot, pipeline'"
+                 "Help: shows this message! Examples:\n" \
+                 "      'Warbot, help me!'\n" \
+                 "      'Warbot, help'\n" \
+                 "War notifier: notifies you when you will have enough points in a war for a ground battle. Examples:\n" \
+                 "      'Warbot, notify me about war [war id number]'\n" \
+                 "      'Warbot, war [war id number]'\n" \
+                 "Beige watcher: notifies you when a certain nation is about to leave beige. Examples:\n" \
+                 "      'Warbot, tell me when beige ends for [nation id number]'\n" \
+                 "      'Warbot, tell me when I can fight [nation id number]'\n" \
+                 "      'Warbot, beige [nation id number]'\n" \
+                 "Show pipeline: shows nations in the current pipeline. Examples:\n" \
+                 "      'Warbot, show me the pipeline'\n" \
+                 "      'Warbot, pipeline'\n"
 
     return jsonify({"text": helpstring})
 
