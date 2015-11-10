@@ -101,3 +101,21 @@ def post_to_market_channel(message, attachments=None):
     sc = slackclient.SlackClient(os.environ.get("slack_token"))
     sc.api_call("chat.postMessage", channel=MARKET_CHANNEL, text=message, username="ROBIE The Robot Bank!", icon_url="http://www.theoldrobots.com/images6/money5.JPG", attachments=attachments)
 
+
+def get_user_id_from_username(username):
+    sc = slackclient.SlackClient(os.environ.get("warbot_token"))
+    result = sc.api_call("users.list")
+    print type(result)
+    result_obj = json.loads(result)
+    for member in result_obj["members"]:
+        if member["name"] == username:
+            return member["id"]
+    return None
+
+
+def pm_user_from_warbot(user_id, message, attachments=None):
+    sc = slackclient.SlackClient(os.environ.get("warbot_token"))
+    result = sc.api_call("im.open", user=user_id)
+    result_obj = json.loads(result)
+    channel_id = result_obj["channel"]["id"]
+    sc.api_call("chat.postMessage", channel=channel_id, text=message, username="warbot", as_user=True, attachments=attachments)

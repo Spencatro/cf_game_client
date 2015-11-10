@@ -12,6 +12,7 @@ import logging
 import sys
 import pymongo
 import requests
+from lib.db_wrapper import DBWrapper
 
 __author__ = 'sxh112430'
 
@@ -212,6 +213,7 @@ class Nation:
     color = None
     uid = None
     founded_date = None
+    beige_turns_left = None
     leader = None
     name = None
     nation_id = None
@@ -656,6 +658,11 @@ class PWClient:
             elif td_key_text == "National Color:":
                 self._print(3,"FOUND COLOR:", tr[1][0][0].text)
                 nation.color = tr[1][0][0].text.strip()
+            elif td_key_text == "Beige Turns Left:":
+                beige_turns_left = tr[1].text.split(" ")[0]
+                num_turns = int(beige_turns_left)
+                nation.beige_turns_left = num_turns
+                self._print(3,"FOUND: Founded:",date_obj)
             elif td_key_text == "Alliance:":
                 if len(tr[1]) > 0:
                     nation.alliance_name = tr[1][0].text
@@ -782,8 +789,14 @@ class PWClient:
         self._print(2, "Making new notification req: ", url)
         self._print(3, self.__make_http_request(url))
 
-    def calculate_beige_exit_time(self,nation_id, be_stupid_verbose=False):
+    def get_beige_exit_time(self, nation_id):
+        nation = self.get_nation_obj_from_ID(nation_id)
+        pass
+
+    def calculate_beige_exit_time(self, nation_id, be_stupid_verbose=False):
         """
+        NOTE: DEPRECATED! USE nation.beige_turns_left instead!
+
         Calculates the time that a nation is expected to leave beige.
 
         :paramnation_id: int representing a nation's ID
@@ -1149,88 +1162,15 @@ class PWClient:
         }
         self.__make_http_request(self.__root_url + "/alliance/id=1356&display=bank", body=body_data, request_type='POST')
 
-
-class LeanPWDB(object):
-    """ this will replace pnw_db.py eventually """
-    def __init__(self):
-        mongo_host = os.environ.get("mongodb_url")
-        mongo_port = int(os.environ.get("mongodb_port"))
-        mongo_dbname = os.environ.get("mongodb_dbname")
-        mongo_user = os.environ.get("mongodb_user")
-        mongo_password = os.environ.get("mongodb_password")
-
-        mongo = pymongo.MongoClient(host=mongo_host, port=mongo_port)
-        pnw_db = mongo[mongo_dbname]
-        pnw_db.authenticate(mongo_user, mongo_password)
-        self._db = pnw_db
-        self.market_watch_collection = self._db["market_watch"]
-        self.market_watch_notification_collection = self._db["market_watch_notifications"]
-
-    def add_market_watch_record(self, resource_dict):
-        today = datetime.datetime.now()
-        record = {"values": resource_dict,
-                  "time": today}
-        return self.market_watch_collection.insert_one(record)
-
-    def get_notification_counts(self):
-        return self.market_watch_notification_collection.find().sort("_id", pymongo.DESCENDING)[0]
-
-    def _increment_notification_for_type(self, item_type, record_type, percentage):
-        percentage_key = "last_"+record_type+"_percentage"
-        n_record = self.get_notification_counts()
-        n_id = n_record["_id"]
-        n_record[item_type][record_type] += 1
-        last_percentage = n_record[item_type][percentage_key]
-        if abs(abs(last_percentage) - abs(percentage)) > 10:
-            n_record[item_type][record_type] = 1
-            n_record[item_type][percentage_key] = percentage
-        count = n_record[item_type][record_type]
-        okay_to_notify = count <= 1
-        self.market_watch_notification_collection.update({"_id": n_id}, n_record)
-        return okay_to_notify
-
-    def increment_buy_counter_for_type(self, item_type, percentage):
-        return self._increment_notification_for_type(item_type, "buy", percentage)
-
-    def increment_sell_counter_for_type(self, item_type, percentage):
-        return self._increment_notification_for_type(item_type, "sell", percentage)
-
-    def increment_buy_offer_counter_for_type(self, item_type):
-        return self._increment_notification_for_type(item_type, "buy_offer", 0)
-
-    def init_new_counter(self, realstring_dict):
-        new_record = {}
-        for key in realstring_dict.keys():
-            new_record[key] = {"buy": 0, "last_buy_percentage": 0, "sell": 0, "last_sell_percentage": 0, "buy_offer": 0, "last_buy_offer_percentage": 0}
-        self.market_watch_notification_collection.insert_one(new_record)
-
-    def _reset_counter(self, item_type, record_type):
-        percentage_key = "last_"+record_type+"_percentage"
-        n_record = self.get_notification_counts()
-        n_id = n_record["_id"]
-        n_record[item_type][record_type] = 0
-        n_record[item_type][percentage_key] = 0
-        self.market_watch_notification_collection.update({"_id": n_id}, n_record)
-
-    def reset_buy_counter(self, item_type):
-        self._reset_counter(item_type, "buy")
-
-    def reset_sell_counter(self, item_type):
-        self._reset_counter(item_type, "buy")
-
-    def reset_buy_offer_counter(self, item_type):
-        self._reset_counter(item_type, "buy_offer")
-
-
-if __name__ == "__main__":
-
-    pwc = PWClient(os.environ['PWUSER'], os.environ['PWPASS'])
-    # pwc.get_list_of_alliance_members_from_alliance_name("Charming Friends")
-
-    print pwc.get_alliance_tax_records_from_id(1356)
-    print pwc.get_alliance_obj_from_id(1356)
-
-    pass
+# if __name__ == "__main__":
+#
+#     pwc = PWClient(os.environ['PWUSER'], os.environ['PWPASS'])
+#     # pwc.get_list_of_alliance_members_from_alliance_name("Charming Friends")
+#
+#     print pwc.get_alliance_tax_records_from_id(1356)
+#     print pwc.get_alliance_obj_from_id(1356)
+#
+#     pass
     # raw_input("WAITING ...")
     #
     # na_id = 18672

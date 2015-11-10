@@ -1,6 +1,9 @@
+import logging
 from flask import Flask, jsonify, request
 import os
 import re
+from pw_client import PWClient
+from warbot.warbotlib.warbot_db import WarbotDB
 
 __author__ = 'shawkins'
 
@@ -22,6 +25,15 @@ SHOW_ME_THE_PIPELINE = re.compile(".*pipeline.*")
 WATCH_MY_WAR = re.compile(".*war.*|.*points.*")
 HELP = re.compile(".*help.*")
 
+wardb = WarbotDB()
+logger = logging.getLogger("pwc")
+fhandler1 = logging.FileHandler("warbot_app.out", mode='w')
+logger.addHandler(fhandler1)
+logger.setLevel(logging.DEBUG)
+
+USERNAME = os.environ['PW_USER']
+PASS = os.environ['PW_PASS']
+pwc = PWClient(USERNAME, PASS, logger=logger)
 
 def verify_token(token):
     if token != os.environ.get("incoming_slack_token"):
@@ -34,11 +46,21 @@ def remove_trigger(trigger, text):
     return text[text.index(trigger) + len(trigger) + 1:]
 
 
-def notify_end_of_beige(slack_uid, action):
-    return jsonify({"text": "Sorry, my human teacher is still teaching me that one!"})
+def notify_end_of_beige(slack_uid, slack_user_name, action):
+    nation_ids = [int(s) for s in action.split() if s.isdigit()]
+    nation_names = []
+    for nation_id in nation_ids:
+        try:
+            nation = pwc.get_nation_obj_from_ID(nation_id)
+        except:
+            continue
+        wardb.create_personal_beige_watch_record(slack_uid, nation_id, nation.name, nation.beige_turns_left)
+        nation_names.append(nation.name)
+    text = {"text": "OK, " + str(slack_user_name) + ", I'll notify you when " + ", ".join(nation_names) + " leave beige"}
+    return jsonify({"text": text})
 
 
-def watch_my_war(slack_uid, action):
+def watch_my_war(slack_uid, slack_user_name, action):
     return jsonify({"text": "I'm afraid I haven't been taught how to do that yet :("})
 
 
@@ -65,23 +87,27 @@ def get_help(action):
 
     return jsonify({"text": helpstring})
 
+def error_message():
+    return jsonify({"text": "I didn't understand that request, ask me for help if you need it!"})
+
 
 @app.route('/', methods=['POST'])
 def hello_world():
     token = request.form.get("token")
     verify_token(token)
     originating_user_id = request.form.get("user_id")
+    originating_user_name = request.form.get("user_name")
     message_body = request.form.get("text")
     trigger = request.form.get("trigger_word")
 
     action = remove_trigger(trigger, message_body)
     if END_OF_BEIGE.match(action):
-        return notify_end_of_beige(originating_user_id, action)
+        return notify_end_of_beige(originating_user_id, originating_user_name, action)
     elif WATCH_MY_WAR.match(action):
-        return watch_my_war(originating_user_id, action)
+        return watch_my_war(originating_user_id, originating_user_name, action)
     elif SHOW_ME_THE_PIPELINE.match(action):
-        return show_pipeline(action)
+        return show_pipeline(originating_user_name, action)
     elif HELP.match(action):
         return get_help(action)
 
-    return jsonify({"text": "I didn't understand that request, ask me for help if you need it!"})
+    return error_message()

@@ -2,7 +2,7 @@ import logging
 import os
 from colour import Color
 import datetime
-from pw_client import PWClient, LeanPWDB
+from pw_client import PWClient, MarketWatchDB
 from bson.objectid import ObjectId
 import plotly.plotly as py
 import plotly.graph_objs as go
@@ -36,7 +36,7 @@ logger.setLevel(logging.DEBUG)
 USERNAME = os.environ['PW_USER']
 PASS = os.environ['PW_PASS']
 pwc = PWClient(USERNAME, PASS, logger=logger)
-pwdb = LeanPWDB()
+pwdb = MarketWatchDB()
 
 sky_blue = Color("#2b8dcc")
 dark_blue = Color("#0d2b3e")
