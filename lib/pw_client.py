@@ -55,11 +55,16 @@ class Battle:
     """
 
     BATTLE_GROUND = "ground attack" #
+    BATTLE_GROUND_COST = 3
     BATTLE_AIR = "an airstrike" #
+    BATTLE_AIR_COST = 4
     BATTLE_DOGFIGHT = "dogfight airstrike" #
     BATTLE_NAVAL = "naval attack" #
+    BATTLE_NAVAL_COST = 4
     BATTLE_MISSILE_STRIKE = "launched a missile" #
+    BATTLE_MISSILE_COST = 8
     BATTLE_NUCLEAR_DETONATION = "detonated a nuclear weapon" #
+    BATTLE_NUCLEAR_COST = 12
     BATTLE_DECLARATION = "declared war upon" #
     BATTLE_TRUCE_AGREEMENT = "have agreed upon a truce" #
     BATTLE_COMPLETION = "immediate surrender" #
@@ -83,7 +88,6 @@ class Battle:
                 battle_type = bt
         if battle_type is None:
             raise Exception("Don't know how to parse "+fight_string)
-
 
         ended_war = battle_type == Battle.BATTLE_COMPLETION
         immense_triumph = "immense triumph" in fight_string
@@ -118,7 +122,7 @@ class Battle:
         self.is_declaration = battle_type == Battle.BATTLE_DECLARATION
 
 class War:
-    def __init__(self, war_id, battles = None):
+    def __init__(self, war_id, battles=None, defender=None, agressor=None):
         """
         :rtype : War
         """
@@ -127,6 +131,8 @@ class War:
         self.date_ended = None
         self.date_started = None
         self.winner_id = None
+        self.defender = defender
+        self.agressor = agressor
         if len(battles) == 0:
             raise Exception("What happened with war "+str(war_id)+"??")
         if self.battles is None:
@@ -789,9 +795,37 @@ class PWClient:
         self._print(2, "Making new notification req: ", url)
         self._print(3, self.__make_http_request(url))
 
-    def get_beige_exit_time(self, nation_id):
-        nation = self.get_nation_obj_from_ID(nation_id)
-        pass
+    def count_war_points(self, nation_id, war_id):
+        war = self.get_war_obj_from_id(war_id)
+        if str(war.agressor) == str(nation_id):
+            start_points = 6
+            self._print("Starting with 6" + str(war))
+        elif str(war.defender) == str(nation_id):
+            self._print("Starting with 12" + str(war))
+            start_points = 12
+        else:
+            raise Exception("Dont know how to handle this war:" + str(war_id))
+        date_started = war.date_started
+        current_time = self.get_current_date_in_datetime()
+        num_hours = int((current_time - date_started).total_seconds() // 3600)
+        num_turns = num_hours / 2
+        points = start_points + num_turns
+
+        for battle in war.battles:
+            if str(battle.actor_id) == str(nation_id):
+                if battle.battle_type == Battle.BATTLE_GROUND:
+                    points -= battle.BATTLE_GROUND_COST
+                elif battle.battle_type == Battle.BATTLE_AIR or battle.battle_type == Battle.BATTLE_DOGFIGHT:
+                    points -= battle.BATTLE_AIR_COST
+                elif battle.battle_type == Battle.BATTLE_NAVAL:
+                    points -= Battle.BATTLE_NAVAL_COST
+                elif battle.battle_type == Battle.BATTLE_MISSILE_STRIKE:
+                    points -= Battle.BATTLE_MISSILE_COST
+                elif battle.battle_type == Battle.BATTLE_NUCLEAR_DETONATION:
+                    points -= Battle.BATTLE_NUCLEAR_COST
+                else:
+                    self._print("Skipping: " + str(battle))
+        return points
 
     def calculate_beige_exit_time(self, nation_id, be_stupid_verbose=False):
         """
@@ -857,12 +891,15 @@ class PWClient:
 
         battle_objs = []
 
+        defender = None
+        agressor = None
+
         for battle_idx in range(len(battle_nodes)):
             battle = battle_nodes[battle_idx]
             battle_time = battle[0][0].text
             battle_description = battle[1][0]
             try:
-                new_battle = Battle.from_nodes(war_id=war_id,time_string =battle_time, description =battle_description)
+                new_battle = Battle.from_nodes(war_id=war_id, time_string=battle_time, description=battle_description)
             except:
                 print "no idea what happened here"
                 print stringify_children(battle_description)
@@ -872,8 +909,11 @@ class PWClient:
                 self.logger.error(traceback.format_stack())
                 raise
             battle_objs.append(new_battle)
+            if new_battle.battle_type == Battle.BATTLE_DECLARATION:
+                defender = new_battle.defender_id
+                agressor = new_battle.actor_id
 
-        w = War(war_id, battles=battle_objs)
+        w = War(war_id, battles=battle_objs, defender=defender, agressor=agressor)
 
         return w
 
@@ -1113,7 +1153,7 @@ class PWClient:
             if "No wars to display" in stringify_children(tr): # empty warlist, just return
                 return war_list
             if tr[0].text == "Date":
-                continue # skip empty row
+                continue  # skip empty row
 
             a_tag = tr[3].find(".//a")
             war_id = a_tag.attrib['href']

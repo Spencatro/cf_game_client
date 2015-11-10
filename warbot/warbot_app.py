@@ -24,6 +24,9 @@ END_OF_BEIGE = re.compile(".*beige.*|.*i can fight.*")
 SHOW_ME_THE_PIPELINE = re.compile(".*pipeline.*")
 WATCH_MY_WAR = re.compile(".*war.*|.*points.*")
 HELP = re.compile(".*help.*")
+REGISTER = re.compile(".*register.*")
+WHO_IS_NATION = re.compile(".*who is nation.*")
+WHO_IS_USER = re.compile(".*who is user.*")
 
 wardb = WarbotDB()
 logger = logging.getLogger("pwc")
@@ -34,6 +37,7 @@ logger.setLevel(logging.DEBUG)
 USERNAME = os.environ['PW_USER']
 PASS = os.environ['PW_PASS']
 pwc = PWClient(USERNAME, PASS, logger=logger)
+
 
 def verify_token(token):
     if token != os.environ.get("incoming_slack_token"):
@@ -46,7 +50,7 @@ def remove_trigger(trigger, text):
     return text[text.index(trigger) + len(trigger) + 1:]
 
 
-def notify_end_of_beige(slack_uid, slack_user_name, action):
+def notify_end_of_beige(slack_uid, slack_username, action):
     nation_ids = [int(s) for s in action.split() if s.isdigit()]
     nations_added = []
     not_in_beige = []
@@ -61,7 +65,7 @@ def notify_end_of_beige(slack_uid, slack_user_name, action):
         else:
             not_in_beige.append(nation.name)
     if len(nations_added) > 0:
-        text = "OK, " + str(slack_user_name) + ", I'll notify you when " + ", ".join(nations_added) + " leaves beige"
+        text = "OK, " + str(slack_username) + ", I'll notify you when " + ", ".join(nations_added) + " leaves beige"
     else:
         text = "I didn't find any nations to add in your query! Try `warbot help` if you need!"
     if len(not_in_beige) > 0:
@@ -70,7 +74,7 @@ def notify_end_of_beige(slack_uid, slack_user_name, action):
     return jsonify({"text": text})
 
 
-def watch_my_war(slack_uid, slack_user_name, action):
+def watch_my_war(slack_uid, slack_username, action):
     return jsonify({"text": "I'm afraid I haven't been taught how to do that yet :("})
 
 
@@ -78,8 +82,20 @@ def show_pipeline(action):
     return jsonify({"text": "Sorry, I'm still learning how to do that one!"})
 
 
-def get_help(action):
+def register_user(slack_uid, slack_username, action):
 
+    nation_ids = [int(s) for s in action.split() if s.isdigit()]
+    if len(nation_ids) != 1:
+        return error_message()
+    nation_id = nation_ids[0]
+
+    nation_obj = pwc.get_nation_obj_from_ID(nation_id)
+    name = nation_obj.name
+
+    wardb.update_user_map(slack_uid, slack_username, nation_id, name)
+
+
+def get_help(action):
     helpstring = "Currently available commands:\n" \
                  "Help: shows this message! Examples:\n" \
                  "      `Warbot, help me!`\n" \
@@ -96,6 +112,29 @@ def get_help(action):
                  "      `Warbot, pipeline`\n"
 
     return jsonify({"text": helpstring})
+
+
+def who_is_nation(action):
+    nation_ids = [int(s.replace("?", "")) for s in action.split() if s.replace("?", "").isdigit()]
+    if len(nation_ids) != 1:
+        return error_message()
+    nation_id = nation_ids[0]
+    cursor = wardb.registered_users.find({"nation_id": str(nation_id)})
+    if cursor.count() != 1:
+        return jsonify({"text": "Sorry, I don't know who "+str(nation_id)+"is"})
+    record = cursor.next()
+    return jsonify({"text": "Nation "+str(nation_id)+" ("+record["nation_name"]+") is "+record["slack_username"]})
+
+
+def who_is_user(action):
+    last_term = action.split(" ")[-1].replace("?", "")
+
+    cursor = wardb.registered_users.find({"slack_username": str(last_term)})
+    if cursor.count() != 1:
+        return jsonify({"text": "Sorry, I don't know who "+str(last_term)+"is"})
+    record = cursor.next()
+    return jsonify({"text": "User "+str(last_term)+" is nation "+record["nation_id"]+" ("+record["nation_name"]+")"})
+
 
 def error_message():
     return jsonify({"text": "I didn't understand that request, ask me for help if you need it!"})
@@ -119,6 +158,12 @@ def hello_world():
         return show_pipeline(action)
     elif HELP.match(action):
         return get_help(action)
+    elif REGISTER.match(action):
+        return register_user(originating_user_id, originating_user_name, action)
+    elif WHO_IS_NATION.match(action):
+        return who_is_nation(action)
+    elif WHO_IS_USER.match(action):
+        return who_is_user(action)
 
     return error_message()
 
