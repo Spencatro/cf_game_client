@@ -42,10 +42,10 @@ pwc = PWClient(USERNAME, PASS, logger=logger)
 
 
 def _print(*args):
+    sys.stderr.write("warbotapp: ")
     for arg in args:
-        sys.stderr.write("warbotapp: ")
         sys.stderr.write(str(arg))
-        sys.stderr.write("\n")
+    sys.stderr.write("\n")
 
 
 def verify_token(token):
