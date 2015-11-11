@@ -25,7 +25,7 @@ SHOW_ME_THE_PIPELINE = re.compile(".*pipeline.*")
 WATCH_MY_WAR = re.compile(".*war.*|.*points.*")
 HELP = re.compile(".*help.*")
 REGISTER = re.compile(".*register.*")
-WHO_IS_NATION = re.compile(".*who is nation.*")
+WHO_IS_NATION = re.compile(".*who owns.*")
 WHO_IS_USER = re.compile(".*who is user.*")
 
 wardb = WarbotDB()
@@ -109,7 +109,17 @@ def get_help(action):
                  "      `Warbot, beige [nation id number]`\n" \
                  "Show pipeline: shows nations in the current pipeline. Examples:\n" \
                  "      `Warbot, show me the pipeline`\n" \
-                 "      `Warbot, pipeline`\n"
+                 "      `Warbot, pipeline`\n" \
+                 "Register user: Register your slack name to your nation:\n" \
+                 "      `Warbot, register my nation as 12345`\n" \
+                 "      `Warbot, register 12345`\n" \
+                 "Who is nation ID: find out what slack user is registered to a nation \n" \
+                 "      `Warbot, who owns the nation with the ID 12345?`\n" \
+                 "      `Warbot, who owns 12345?`\n" \
+                 "Who is user: find out what nation ID and name is registered to a slack user \n" \
+                 "      `Warbot, who is user @spencer?`\n" \
+                 "      `Warbot, who is user spencer`\n" \
+                 "       Note: the final term in this query MUST be the username in question. @ can be included or not.\n"
 
     return jsonify({"text": helpstring})
 
@@ -127,7 +137,7 @@ def who_is_nation(action):
 
 
 def who_is_user(action):
-    last_term = action.split(" ")[-1].replace("?", "")
+    last_term = action.split(" ")[-1].replace("?", "").replace("@", "")
 
     cursor = wardb.registered_users.find({"slack_username": str(last_term)})
     if cursor.count() != 1:
@@ -136,8 +146,11 @@ def who_is_user(action):
     return jsonify({"text": "User "+str(last_term)+" is nation "+record["nation_id"]+" ("+record["nation_name"]+")"})
 
 
-def error_message():
-    return jsonify({"text": "I didn't understand that request, ask me for help if you need it!"})
+def error_message(additional_info=None):
+    text = "I didn't understand that request, ask me for help if you need it!"
+    if additional_info:
+        text += "\n    More info: "+additional_info
+    return jsonify({"text": text})
 
 
 @app.route('/', methods=['POST'])
