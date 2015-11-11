@@ -2,8 +2,10 @@ import logging
 from flask import Flask, jsonify, request
 import os
 import re
+import sys
 from pw_client import PWClient
 from warbot.warbotlib.warbot_db import WarbotDB
+import traceback
 
 __author__ = 'shawkins'
 
@@ -26,7 +28,7 @@ WATCH_MY_WAR = re.compile(".*war.*|.*points.*")
 HELP = re.compile(".*help.*")
 REGISTER = re.compile(".*register.*")
 WHO_IS_NATION = re.compile(".*who owns.*")
-WHO_IS_USER = re.compile(".*who is user.*")
+WHO_IS_USER = re.compile(".*who is.*")
 
 wardb = WarbotDB()
 logger = logging.getLogger("pwc")
@@ -37,6 +39,13 @@ logger.setLevel(logging.DEBUG)
 USERNAME = os.environ['PW_USER']
 PASS = os.environ['PW_PASS']
 pwc = PWClient(USERNAME, PASS, logger=logger)
+
+
+def _print(*args):
+    for arg in args:
+        sys.stderr.write("warbotapp: ")
+        sys.stderr.write(str(arg))
+        sys.stderr.write("\n")
 
 
 def verify_token(token):
@@ -51,15 +60,17 @@ def remove_trigger(trigger, text):
 
 
 def notify_end_of_beige(slack_uid, slack_username, action):
+    _print("enter notify_end_of_beige")
     nation_ids = [int(s) for s in action.split() if s.isdigit()]
     nations_added = []
     not_in_beige = []
     for nation_id in nation_ids:
         try:
             nation = pwc.get_nation_obj_from_ID(nation_id)
-        except Exception as e:
-            print "Skipping this nation, exception below:"
-            print e
+        except:
+            trace = traceback.format_exc()
+            _print("Skipping this nation, exception below:")
+            _print(trace)
             continue
         if nation.beige_turns_left is not None:
             wardb.create_personal_beige_watch_record(slack_uid, nation_id, nation.name, nation.beige_turns_left)
@@ -91,7 +102,7 @@ def register_user(slack_uid, slack_username, action):
         return error_message()
     nation_id = nation_ids[0]
 
-    print "Getting nation to register: ", nation_id
+    _print("Getting nation to register: ", nation_id)
 
     nation_obj = pwc.get_nation_obj_from_ID(nation_id)
     name = nation_obj.name
@@ -159,30 +170,41 @@ def error_message(additional_info=None):
     return jsonify({"text": text})
 
 
-@app.route('/', methods=['POST'])
+@app.route('/', methods=['POST', 'GET'])
 def hello_world():
+    _print("New request\n-----------------")
+    _print("All keys and values:")
+    for key in request.form.keys():
+        _print(key)
+        _print("\t", request.form[key])
     token = request.form.get("token")
     verify_token(token)
     originating_user_id = request.form.get("user_id")
-    originating_user_name = request.form.get("user_name")
+    originating_user_name = request.form.get("user_name").lower()
     message_body = request.form.get("text").lower()
     trigger = request.form.get("trigger_word").lower()
 
     action = remove_trigger(trigger, message_body)
-    if END_OF_BEIGE.match(action):
-        return notify_end_of_beige(originating_user_id, originating_user_name, action)
-    elif WATCH_MY_WAR.match(action):
-        return watch_my_war(originating_user_id, originating_user_name, action)
-    elif SHOW_ME_THE_PIPELINE.match(action):
-        return show_pipeline(action)
-    elif HELP.match(action):
-        return get_help(action)
-    elif REGISTER.match(action):
-        return register_user(originating_user_id, originating_user_name, action)
-    elif WHO_IS_NATION.match(action):
-        return who_is_nation(action)
-    elif WHO_IS_USER.match(action):
-        return who_is_user(action)
+    _print("action:", action)
+    try:
+        if END_OF_BEIGE.match(action):
+            return notify_end_of_beige(originating_user_id, originating_user_name, action)
+        elif WATCH_MY_WAR.match(action):
+            return watch_my_war(originating_user_id, originating_user_name, action)
+        elif SHOW_ME_THE_PIPELINE.match(action):
+            return show_pipeline(action)
+        elif HELP.match(action):
+            return get_help(action)
+        elif REGISTER.match(action):
+            return register_user(originating_user_id, originating_user_name, action)
+        elif WHO_IS_NATION.match(action):
+            return who_is_nation(action)
+        elif WHO_IS_USER.match(action):
+            return who_is_user(action)
+    except:
+        trace = traceback.format_exc()
+        _print("unknown exception occurred, trace following...")
+        _print(trace)
 
     return error_message()
 
