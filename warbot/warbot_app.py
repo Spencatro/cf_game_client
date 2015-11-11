@@ -57,7 +57,9 @@ def notify_end_of_beige(slack_uid, slack_username, action):
     for nation_id in nation_ids:
         try:
             nation = pwc.get_nation_obj_from_ID(nation_id)
-        except:
+        except Exception as e:
+            print "Skipping this nation, exception below:"
+            print e
             continue
         if nation.beige_turns_left is not None:
             wardb.create_personal_beige_watch_record(slack_uid, nation_id, nation.name, nation.beige_turns_left)
