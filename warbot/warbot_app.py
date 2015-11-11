@@ -94,6 +94,8 @@ def register_user(slack_uid, slack_username, action):
 
     wardb.update_user_map(slack_uid, slack_username, nation_id, name)
 
+    return jsonify({"text": "OK, "+slack_username+", I've registered your nation as "+name})
+
 
 def get_help(action):
     helpstring = "Currently available commands:\n" \
