@@ -91,6 +91,8 @@ def register_user(slack_uid, slack_username, action):
         return error_message()
     nation_id = nation_ids[0]
 
+    print "Getting nation to register: ", nation_id
+
     nation_obj = pwc.get_nation_obj_from_ID(nation_id)
     name = nation_obj.name
 
