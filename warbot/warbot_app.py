@@ -30,7 +30,6 @@ REGISTER = re.compile(".*register.*")
 WHO_IS_NATION = re.compile(".*who owns.*")
 WHO_IS_USER = re.compile(".*who is.*")
 
-wardb = WarbotDB()
 logger = logging.getLogger("pwc")
 fhandler1 = logging.FileHandler("warbot_app.out", mode='w')
 logger.addHandler(fhandler1)
@@ -38,7 +37,6 @@ logger.setLevel(logging.DEBUG)
 
 USERNAME = os.environ['PW_USER']
 PASS = os.environ['PW_PASS']
-pwc = PWClient(USERNAME, PASS, logger=logger)
 
 
 def _print(*args):
@@ -60,6 +58,9 @@ def remove_trigger(trigger, text):
 
 
 def notify_end_of_beige(slack_uid, slack_username, action):
+    pwc = PWClient(USERNAME, PASS, logger=logger)
+    wardb = WarbotDB()
+
     _print("enter notify_end_of_beige")
     nation_ids = [int(s) for s in action.split() if s.isdigit()]
     nations_added = []
@@ -88,6 +89,11 @@ def notify_end_of_beige(slack_uid, slack_username, action):
 
 
 def watch_my_war(slack_uid, slack_username, action):
+    wardb = WarbotDB()
+    cursor = wardb.registered_users.find({"slack_username": slack_username})
+    if cursor.count() != 1:
+        return jsonify({"text": "You have to `register` with me first! (Try asking for help, and look for the `register` command)"})
+
     return jsonify({"text": "I'm afraid I haven't been taught how to do that yet :("})
 
 
@@ -96,6 +102,8 @@ def show_pipeline(action):
 
 
 def register_user(slack_uid, slack_username, action):
+    pwc = PWClient(USERNAME, PASS, logger=logger)
+    wardb = WarbotDB()
 
     nation_ids = [int(s) for s in action.split() if s.isdigit()]
     if len(nation_ids) != 1:
@@ -142,6 +150,7 @@ def get_help(action):
 
 
 def who_is_nation(action):
+    wardb = WarbotDB()
     nation_ids = [int(s.replace("?", "")) for s in action.split() if s.replace("?", "").isdigit()]
     if len(nation_ids) != 1:
         return error_message()
@@ -154,6 +163,7 @@ def who_is_nation(action):
 
 
 def who_is_user(action):
+    wardb = WarbotDB()
     last_term = action.split(" ")[-1].replace("?", "").replace("@", "")
 
     cursor = wardb.registered_users.find({"slack_username": str(last_term)})
