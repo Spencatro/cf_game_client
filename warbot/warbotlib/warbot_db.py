@@ -9,11 +9,19 @@ class WarbotDB(DBWrapper):
         self.global_beige_watches = self.pnw_db["global_beige_watches"]
         self.registered_users = self.pnw_db["registered_users"]
 
+    def set_war_to_watch(self, slack_uid, slack_username, nation_id, war_id):
+        record = {
+            "requesting_user_slack_id": slack_uid,
+            "requesting_user_slack_username": slack_username
+        }
+
     def create_personal_beige_watch_record(self, slack_uid, nation_id, nation_name, beige_turns):
-        record = {"requesting_user_slack_id": slack_uid,
-                  "nation_name": nation_name,
-                  "nation_id": nation_id,
-                  "state": "watch"}
+        record = {
+            "requesting_user_slack_id": slack_uid,
+            "nation_name": nation_name,
+            "nation_id": nation_id,
+            "state": "watch"
+        }
         if beige_turns == 1:
             record["state"] = "notify"
         if self.beige_checks.find({"requesting_user_slack_id": slack_uid, "nation_id": nation_id}) is None:

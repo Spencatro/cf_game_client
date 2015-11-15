@@ -319,13 +319,14 @@ class PWClient:
         :param kwargs:
         :return:
         """
-        if self.debug >= debug_level:
-            logstring = ""
-            for arg in kwargs:
-                print arg,
-                logstring += str(arg)+" "
-            print ""
-            self.logger.info(logstring)
+        # if self.debug >= debug_level:
+        logstring = ""
+        for arg in kwargs:
+            print arg,
+            logstring += str(arg)+" "
+        print ""
+        # self.logger.info(logstring)
+        sys.stderr.write("pwc log: "+str(logstring))
 
     def _retrieve_leftcolumn(self):
         """
@@ -582,7 +583,7 @@ class PWClient:
         dt = datetime.datetime.strptime(datestring+" "+str(now_year), "%B %d %I:%M %p %Y")
         return dt
 
-    def get_nation_obj_from_ID(self,nation_id, skip_cache = False):
+    def get_nation_obj_from_ID(self,nation_id, skip_cache=False):
         """
         returns a nation object from a nations ID. If skip_cache = True, this will pull the webpage even if it is cached
 
