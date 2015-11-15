@@ -1,0 +1,3 @@
+[submodule "warbot/warbot_rtm/python-rtmbot"]
+	path = warbot/warbot_rtm/python-rtmbot
+	url = https://github.com/shawkinsl/python-rtmbot.git

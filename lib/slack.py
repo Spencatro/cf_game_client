@@ -106,11 +106,20 @@ def post_to_market_channel(message, attachments=None):
 def get_user_id_from_username(username):
     sc = slackclient.SlackClient(os.environ.get("warbot_token"))
     result = sc.api_call("users.list")
-    print type(result)
     result_obj = json.loads(result)
     for member in result_obj["members"]:
         if member["name"] == username:
             return member["id"]
+    return None
+
+
+def get_username_from_user_id(user_id):
+    sc = slackclient.SlackClient(os.environ.get("warbot_token"))
+    result = sc.api_call("users.list")
+    result_obj = json.loads(result)
+    for member in result_obj["members"]:
+        if member["id"] == user_id:
+            return member["name"]
     return None
 
 
