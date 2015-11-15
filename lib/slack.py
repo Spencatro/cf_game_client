@@ -114,8 +114,13 @@ def get_user_id_from_username(username):
 
 
 def pm_user_from_warbot(user_id, message, attachments=None):
+    print "pm'ing user:", user_id
+    print "message:", message
     sc = slackclient.SlackClient(os.environ.get("warbot_token"))
     result = sc.api_call("im.open", user=user_id)
     result_obj = json.loads(result)
     channel_id = result_obj["channel"]["id"]
-    sc.api_call("chat.postMessage", channel=channel_id, text=message, username="warbot", as_user=True, attachments=attachments)
+    result = sc.api_call("chat.postMessage", channel=channel_id, text=message, username="warbot", as_user=True, attachments=attachments)
+    result_dict = json.loads(result)
+    print result_dict
+    return result_dict
