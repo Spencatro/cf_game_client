@@ -12,6 +12,7 @@ import logging
 import sys
 import pymongo
 import requests
+from lib.db_wrapper import DBWrapper
 
 __author__ = 'sxh112430'
 
@@ -54,11 +55,16 @@ class Battle:
     """
 
     BATTLE_GROUND = "ground attack" #
+    BATTLE_GROUND_COST = 3
     BATTLE_AIR = "an airstrike" #
+    BATTLE_AIR_COST = 4
     BATTLE_DOGFIGHT = "dogfight airstrike" #
     BATTLE_NAVAL = "naval attack" #
+    BATTLE_NAVAL_COST = 4
     BATTLE_MISSILE_STRIKE = "launched a missile" #
+    BATTLE_MISSILE_COST = 8
     BATTLE_NUCLEAR_DETONATION = "detonated a nuclear weapon" #
+    BATTLE_NUCLEAR_COST = 12
     BATTLE_DECLARATION = "declared war upon" #
     BATTLE_TRUCE_AGREEMENT = "have agreed upon a truce" #
     BATTLE_COMPLETION = "immediate surrender" #
@@ -82,7 +88,6 @@ class Battle:
                 battle_type = bt
         if battle_type is None:
             raise Exception("Don't know how to parse "+fight_string)
-
 
         ended_war = battle_type == Battle.BATTLE_COMPLETION
         immense_triumph = "immense triumph" in fight_string
@@ -117,7 +122,7 @@ class Battle:
         self.is_declaration = battle_type == Battle.BATTLE_DECLARATION
 
 class War:
-    def __init__(self, war_id, battles = None):
+    def __init__(self, war_id, battles=None, defender=None, agressor=None):
         """
         :rtype : War
         """
@@ -126,6 +131,8 @@ class War:
         self.date_ended = None
         self.date_started = None
         self.winner_id = None
+        self.defender = defender
+        self.agressor = agressor
         if len(battles) == 0:
             raise Exception("What happened with war "+str(war_id)+"??")
         if self.battles is None:
@@ -212,6 +219,7 @@ class Nation:
     color = None
     uid = None
     founded_date = None
+    beige_turns_left = None
     leader = None
     name = None
     nation_id = None
@@ -311,13 +319,14 @@ class PWClient:
         :param kwargs:
         :return:
         """
-        if self.debug >= debug_level:
-            logstring = ""
-            for arg in kwargs:
-                print arg,
-                logstring += str(arg)+" "
-            print ""
-            self.logger.info(logstring)
+        # if self.debug >= debug_level:
+        logstring = ""
+        for arg in kwargs:
+            print arg,
+            logstring += str(arg)+" "
+        print ""
+        # self.logger.info(logstring)
+        sys.stderr.write("pwc log: "+str(logstring))
 
     def _retrieve_leftcolumn(self):
         """
@@ -574,7 +583,7 @@ class PWClient:
         dt = datetime.datetime.strptime(datestring+" "+str(now_year), "%B %d %I:%M %p %Y")
         return dt
 
-    def get_nation_obj_from_ID(self,nation_id, skip_cache = False):
+    def get_nation_obj_from_ID(self,nation_id, skip_cache=False):
         """
         returns a nation object from a nations ID. If skip_cache = True, this will pull the webpage even if it is cached
 
@@ -656,6 +665,11 @@ class PWClient:
             elif td_key_text == "National Color:":
                 self._print(3,"FOUND COLOR:", tr[1][0][0].text)
                 nation.color = tr[1][0][0].text.strip()
+            elif td_key_text == "Beige Turns Left:":
+                beige_turns_left = tr[1].text.split(" ")[0]
+                num_turns = int(beige_turns_left)
+                nation.beige_turns_left = num_turns
+                self._print(3,"FOUND: Founded:",date_obj)
             elif td_key_text == "Alliance:":
                 if len(tr[1]) > 0:
                     nation.alliance_name = tr[1][0].text
@@ -782,8 +796,42 @@ class PWClient:
         self._print(2, "Making new notification req: ", url)
         self._print(3, self.__make_http_request(url))
 
-    def calculate_beige_exit_time(self,nation_id, be_stupid_verbose=False):
+    def count_war_points(self, nation_id, war_id):
+        war = self.get_war_obj_from_id(war_id)
+        if str(war.agressor) == str(nation_id):
+            start_points = 6
+            self._print("Starting with 6" + str(war))
+        elif str(war.defender) == str(nation_id):
+            self._print("Starting with 12" + str(war))
+            start_points = 12
+        else:
+            raise Exception("Dont know how to handle this war:" + str(war_id))
+        date_started = war.date_started
+        current_time = self.get_current_date_in_datetime()
+        num_hours = int((current_time - date_started).total_seconds() // 3600)
+        num_turns = num_hours / 2
+        points = start_points + num_turns
+
+        for battle in war.battles:
+            if str(battle.actor_id) == str(nation_id):
+                if battle.battle_type == Battle.BATTLE_GROUND:
+                    points -= battle.BATTLE_GROUND_COST
+                elif battle.battle_type == Battle.BATTLE_AIR or battle.battle_type == Battle.BATTLE_DOGFIGHT:
+                    points -= battle.BATTLE_AIR_COST
+                elif battle.battle_type == Battle.BATTLE_NAVAL:
+                    points -= Battle.BATTLE_NAVAL_COST
+                elif battle.battle_type == Battle.BATTLE_MISSILE_STRIKE:
+                    points -= Battle.BATTLE_MISSILE_COST
+                elif battle.battle_type == Battle.BATTLE_NUCLEAR_DETONATION:
+                    points -= Battle.BATTLE_NUCLEAR_COST
+                else:
+                    self._print("Skipping: " + str(battle))
+        return points
+
+    def calculate_beige_exit_time(self, nation_id, be_stupid_verbose=False):
         """
+        NOTE: DEPRECATED! USE nation.beige_turns_left instead!
+
         Calculates the time that a nation is expected to leave beige.
 
         :paramnation_id: int representing a nation's ID
@@ -844,12 +892,15 @@ class PWClient:
 
         battle_objs = []
 
+        defender = None
+        agressor = None
+
         for battle_idx in range(len(battle_nodes)):
             battle = battle_nodes[battle_idx]
             battle_time = battle[0][0].text
             battle_description = battle[1][0]
             try:
-                new_battle = Battle.from_nodes(war_id=war_id,time_string =battle_time, description =battle_description)
+                new_battle = Battle.from_nodes(war_id=war_id, time_string=battle_time, description=battle_description)
             except:
                 print "no idea what happened here"
                 print stringify_children(battle_description)
@@ -859,8 +910,11 @@ class PWClient:
                 self.logger.error(traceback.format_stack())
                 raise
             battle_objs.append(new_battle)
+            if new_battle.battle_type == Battle.BATTLE_DECLARATION:
+                defender = new_battle.defender_id
+                agressor = new_battle.actor_id
 
-        w = War(war_id, battles=battle_objs)
+        w = War(war_id, battles=battle_objs, defender=defender, agressor=agressor)
 
         return w
 
@@ -1100,7 +1154,7 @@ class PWClient:
             if "No wars to display" in stringify_children(tr): # empty warlist, just return
                 return war_list
             if tr[0].text == "Date":
-                continue # skip empty row
+                continue  # skip empty row
 
             a_tag = tr[3].find(".//a")
             war_id = a_tag.attrib['href']
@@ -1149,88 +1203,15 @@ class PWClient:
         }
         self.__make_http_request(self.__root_url + "/alliance/id=1356&display=bank", body=body_data, request_type='POST')
 
-
-class LeanPWDB(object):
-    """ this will replace pnw_db.py eventually """
-    def __init__(self):
-        mongo_host = os.environ.get("mongodb_url")
-        mongo_port = int(os.environ.get("mongodb_port"))
-        mongo_dbname = os.environ.get("mongodb_dbname")
-        mongo_user = os.environ.get("mongodb_user")
-        mongo_password = os.environ.get("mongodb_password")
-
-        mongo = pymongo.MongoClient(host=mongo_host, port=mongo_port)
-        pnw_db = mongo[mongo_dbname]
-        pnw_db.authenticate(mongo_user, mongo_password)
-        self._db = pnw_db
-        self.market_watch_collection = self._db["market_watch"]
-        self.market_watch_notification_collection = self._db["market_watch_notifications"]
-
-    def add_market_watch_record(self, resource_dict):
-        today = datetime.datetime.now()
-        record = {"values": resource_dict,
-                  "time": today}
-        return self.market_watch_collection.insert_one(record)
-
-    def get_notification_counts(self):
-        return self.market_watch_notification_collection.find().sort("_id", pymongo.DESCENDING)[0]
-
-    def _increment_notification_for_type(self, item_type, record_type, percentage):
-        percentage_key = "last_"+record_type+"_percentage"
-        n_record = self.get_notification_counts()
-        n_id = n_record["_id"]
-        n_record[item_type][record_type] += 1
-        last_percentage = n_record[item_type][percentage_key]
-        if abs(abs(last_percentage) - abs(percentage)) > 10:
-            n_record[item_type][record_type] = 1
-            n_record[item_type][percentage_key] = percentage
-        count = n_record[item_type][record_type]
-        okay_to_notify = count <= 1
-        self.market_watch_notification_collection.update({"_id": n_id}, n_record)
-        return okay_to_notify
-
-    def increment_buy_counter_for_type(self, item_type, percentage):
-        return self._increment_notification_for_type(item_type, "buy", percentage)
-
-    def increment_sell_counter_for_type(self, item_type, percentage):
-        return self._increment_notification_for_type(item_type, "sell", percentage)
-
-    def increment_buy_offer_counter_for_type(self, item_type):
-        return self._increment_notification_for_type(item_type, "buy_offer", 0)
-
-    def init_new_counter(self, realstring_dict):
-        new_record = {}
-        for key in realstring_dict.keys():
-            new_record[key] = {"buy": 0, "last_buy_percentage": 0, "sell": 0, "last_sell_percentage": 0, "buy_offer": 0, "last_buy_offer_percentage": 0}
-        self.market_watch_notification_collection.insert_one(new_record)
-
-    def _reset_counter(self, item_type, record_type):
-        percentage_key = "last_"+record_type+"_percentage"
-        n_record = self.get_notification_counts()
-        n_id = n_record["_id"]
-        n_record[item_type][record_type] = 0
-        n_record[item_type][percentage_key] = 0
-        self.market_watch_notification_collection.update({"_id": n_id}, n_record)
-
-    def reset_buy_counter(self, item_type):
-        self._reset_counter(item_type, "buy")
-
-    def reset_sell_counter(self, item_type):
-        self._reset_counter(item_type, "buy")
-
-    def reset_buy_offer_counter(self, item_type):
-        self._reset_counter(item_type, "buy_offer")
-
-
-if __name__ == "__main__":
-
-    pwc = PWClient(os.environ['PWUSER'], os.environ['PWPASS'])
-    # pwc.get_list_of_alliance_members_from_alliance_name("Charming Friends")
-
-    print pwc.get_alliance_tax_records_from_id(1356)
-    print pwc.get_alliance_obj_from_id(1356)
-
-    pass
+# if __name__ == "__main__":
+#
+#     pwc = PWClient(os.environ['PWUSER'], os.environ['PWPASS'])
+#     # pwc.get_list_of_alliance_members_from_alliance_name("Charming Friends")
+#
+#     print pwc.get_alliance_tax_records_from_id(1356)
+#     print pwc.get_alliance_obj_from_id(1356)
+#
+#     pass
     # raw_input("WAITING ...")
     #
     # na_id = 18672

@@ -3,3 +3,4 @@ pymongo
 lxml
 httplib2
 colour
+requests
