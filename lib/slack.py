@@ -1,6 +1,7 @@
 import json
 import os
 import slackclient
+import time
 
 __author__ = 'shawkins'
 
@@ -116,6 +117,7 @@ def get_user_id_from_username(username):
 def pm_user_from_warbot(user_id, message, attachments=None):
     print "pm'ing user:", user_id
     print "message:", message
+    time.sleep(3)
     sc = slackclient.SlackClient(os.environ.get("warbot_token"))
     result = sc.api_call("im.open", user=user_id)
     result_obj = json.loads(result)
