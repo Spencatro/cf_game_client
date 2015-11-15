@@ -319,14 +319,12 @@ class PWClient:
         :param kwargs:
         :return:
         """
-        # if self.debug >= debug_level:
-        logstring = ""
-        for arg in kwargs:
-            print arg,
-            logstring += str(arg)+" "
-        print ""
-        # self.logger.info(logstring)
-        sys.stderr.write("pwc log: "+str(logstring))
+        if self.debug >= debug_level:
+            logstring = ""
+            for arg in kwargs:
+                print arg,
+                logstring += str(arg)+" "
+            sys.stderr.write("pwc log: "+str(logstring))
 
     def _retrieve_leftcolumn(self):
         """
