@@ -103,10 +103,10 @@ for nation in nation_keys:
     score = n_obj.score
     value_taken = nation_totals[nation]
     label = n_obj.name
-    if value_taken > 0:
-        x.append(score)
-        y.append(value_taken)
-        titles.append(label)
+    # if value_taken > 0:
+    x.append(score)
+    y.append(value_taken)
+    titles.append(label)
 
 trace = go.Scatter(x=x,
                    y=y,
