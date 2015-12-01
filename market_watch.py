@@ -141,8 +141,8 @@ for item_type in realstring_dict.keys():
                             title=item_type+": price over time", style=DarkStyle)
     line_chart.x_labels = [r['time'].strftime("%b %e - %I:%M%p") for r in records]
     line_chart.add("Current Price", [r['values'][item_type]['sell'] for r in records])
-    line_chart.add("Long-Term Avg", [r[item_type]["sell"] for r in long_term_averages])
-    line_chart.add("Short-Term Avg", [r[item_type]["sell"] for r in short_term_averages])
+    line_chart.add("10 Day Avg", [r[item_type]["sell"] for r in long_term_averages])
+    line_chart.add("3  Day Avg", [r[item_type]["sell"] for r in short_term_averages])
     line_chart.render_to_file("test_file.svg")
 
     plot_embed = line_chart.render()
