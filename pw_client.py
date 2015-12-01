@@ -1166,6 +1166,9 @@ class LeanPWDB(object):
         self.market_watch_collection = self._db["market_watch"]
         self.market_watch_notification_collection = self._db["market_watch_notifications"]
 
+    def get_recent_market_records(self, num_records=200):
+        return [i for i in self.market_watch_collection.find().sort("_id", 1).limit(num_records)]
+
     def add_market_watch_record(self, resource_dict):
         today = datetime.datetime.now()
         record = {"values": resource_dict,

@@ -2,6 +2,8 @@ import logging
 import os
 from colour import Color
 import datetime
+import pygal
+from pygal.style import CleanStyle, DarkStyle
 from pw_client import PWClient, LeanPWDB
 from bson.objectid import ObjectId
 import plotly.plotly as py
@@ -75,51 +77,48 @@ for item_type in realstring_dict.keys():
     resource_dict[item_type]["sell"] = trade_num
 
 result = pwdb.add_market_watch_record(resource_dict)
-oid = ObjectId(result.inserted_id)
-oid_datetime = oid.generation_time.strftime("%Y-%m-%d %H:%M:%S")
 
-averages = {}
-for item_type in realstring_dict.keys():
-    res = pwdb.market_watch_collection.aggregate([{"$group": {"_id": None, "sell": {"$avg": "$values."+item_type+".sell"}, "buy": {"$avg": "$values."+item_type+".buy"}}}])
-    values = res.next()
-    averages[item_type] = {"sell": values["sell"], "buy": values["buy"]}
+# averages = {}
+# for item_type in realstring_dict.keys():
+#     res = pwdb.market_watch_collection.aggregate([{"$group": {"_id": None, "sell": {"$avg": "$values."+item_type+".sell"}, "buy": {"$avg": "$values."+item_type+".buy"}}}])
+#     values = res.next()
+#     averages[item_type] = {"sell": values["sell"], "buy": values["buy"]}
+
+# get recent data
+average_records = pwdb.get_recent_market_records(num_records=800)
+averages = []
+for i in range(len(average_records)):
+    records_counted_towards_average = average_records[0:i+1]
+    average_dict = {}
+    for item_type in realstring_dict.keys():
+        average_dict[item_type] = {"buy": 0, "sell": 0}
+        # calc for sells
+        average_sell_at_index = float(sum(r['values'][item_type]['sell'] for r in records_counted_towards_average)) / float(i+1)
+        average_dict[item_type]["sell"] = average_sell_at_index
+        # calc for buys
+        average_buy_at_index = float(sum(r['values'][item_type]['buy'] for r in records_counted_towards_average)) / float(i+1)
+        average_dict[item_type]["buy"] = average_buy_at_index
+    averages.append(average_dict)
+records = average_records[200:]
+averages = averages[200:]
 
 # Generate charts
 plot_embeds = {}
 plot_urls = {}
 
 for item_type in realstring_dict.keys():
+    line_chart = pygal.Line(x_label_rotation=40, show_minor_x_labels=False, x_labels_major_every=96,
+                            title=item_type+": price over time", style=DarkStyle)
+    line_chart.x_labels = [r['time'].strftime("%b %e - %I:%M%p") for r in records]
+    line_chart.add("Current Price", [r['values'][item_type]['sell'] for r in records])
+    line_chart.add("Short-Term Avg", [r[item_type]["sell"] for r in averages])
+    line_chart.render_to_file("test_file.svg")
 
-    t1x = [oid_datetime]
-    t1y = [averages[item_type]["sell"]]
-    t2y = [resource_dict[item_type]["sell"]]
-    trace1 = go.Scatter(x=t1x,
-                        y=t1y,
-                        mode='lines+markers',
-                        name="Average price at turn",
-                        line=dict(
-                            shape='spline'
-                        ))
-    trace2 = go.Scatter(x=t1x,
-                        y=t2y,
-                        mode='lines+markers',
-                        name="Current price at turn",
-                        line=dict(
-                            shape='spline'
-                        ))
-    data = [trace1, trace2]
-    layout = go.Layout(
-        title=(realstring_dict[item_type] + ': price and average over time').capitalize(),
-        showlegend=True
-    )
-    # get the start of the week
-    today = datetime.date.today()
-    last_monday = today + datetime.timedelta(days=-today.weekday())
-    month_day_year = last_monday.strftime("%m.%d.%Y")
+    plot_embed = line_chart.render()
 
-    fig = go.Figure(data=data, layout=layout)
-    plot_url = py.plot(fig, filename="PNWMarketWatch_weekof_"+month_day_year+"/"+item_type, auto_open=False, fileopt='extend')
-    plot_embed = tls.get_embed(plot_url)
+    # TODO: get url?
+    plot_url = None
+
     plot_embeds[item_type] = plot_embed
     plot_urls[item_type] = plot_url
 
@@ -138,8 +137,8 @@ for item_type in realstring_dict.keys():
     # Make judgements on sells
 
     current_sell = resource_dict[item_type]["sell"]
-    average_sell = averages[item_type]["sell"]
-    sell_diffp = (abs(averages[item_type]["sell"] - resource_dict[item_type]["sell"]) / (.5 * (averages[item_type]["sell"] + resource_dict[item_type]["sell"]))) * 100
+    average_sell = averages[-1][item_type]["sell"]
+    sell_diffp = (abs(averages[-1][item_type]["sell"] - resource_dict[item_type]["sell"]) / (.5 * (averages[-1][item_type]["sell"] + resource_dict[item_type]["sell"]))) * 100
     gradient_index = 0
     if sell_diffp > 25:
         gradient_index = 99
@@ -152,14 +151,16 @@ for item_type in realstring_dict.keys():
         sell_color = str(blue_gradient[gradient_index])
         if sell_diffp >= 25.0:
             if pwdb.increment_buy_counter_for_type(item_type, sell_diffp):
-                post_good_buy(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
+                pass # TODO: this
+                # post_good_buy(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
         else:
             pwdb.reset_buy_counter(item_type)
         sell_diffp *= -1
     else:
         if sell_diffp >= 25.0:
             if pwdb.increment_sell_counter_for_type(item_type, sell_diffp):
-                post_good_sell(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
+                pass # TODO: this
+                # post_good_sell(realstring_dict[item_type], make_trade_url(realstring_dict[item_type]), average_sell, current_sell, image_url=plot_urls[item_type]+".png")
         else:
             pwdb.reset_sell_counter(item_type)
         sell_color = str(orange_gradient[gradient_index])
@@ -170,7 +171,7 @@ for item_type in realstring_dict.keys():
     else:
         buys_higher_than_avg_sells[item_type] = -1
 
-    buy_diffp = (abs(averages[item_type]["buy"] - resource_dict[item_type]["buy"]) / (.5 * (averages[item_type]["buy"] + resource_dict[item_type]["buy"]))) * 100
+    buy_diffp = (abs(averages[-1][item_type]["buy"] - resource_dict[item_type]["buy"]) / (.5 * (averages[-1][item_type]["buy"] + resource_dict[item_type]["buy"]))) * 100
     html_string += "<tr>" \
                    "<td>"+realstring_dict[item_type].capitalize()+"</td>" \
                    "<td style='color:"+sell_color+";'>"+str(current_sell)+"</td>" \
@@ -189,9 +190,8 @@ for key in buys_higher_than_avg_sells.keys():
         good = realstring_dict[key]
         good_url = make_trade_url(good, ascending=False, sell=False)
         if pwdb.increment_buy_offer_counter_for_type(key):
-            post_good_buy_offer(good, good_url, averages[key]["sell"], buys_higher_than_avg_sells[key])
+            pass # TODO: this
+            # post_good_buy_offer(good, good_url, averages[key]["sell"], buys_higher_than_avg_sells[key])
 
 for key in plot_embeds:
     print plot_embeds[key]
-
-
