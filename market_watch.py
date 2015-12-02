@@ -6,9 +6,6 @@ import pygal
 from pygal.style import CleanStyle, DarkStyle
 from pw_client import PWClient, LeanPWDB
 from bson.objectid import ObjectId
-import plotly.plotly as py
-import plotly.graph_objs as go
-import plotly.tools as tls
 from slack import post_good_buy, post_good_buy_offer, post_good_sell
 
 money_string = '<b style="color: #28d020;">$</b>'
