@@ -1,15 +1,7 @@
 import logging
 import os
 from colour import Color
-import datetime
-import pygal
-from pygal.style import CleanStyle, DarkStyle
 from pw_client import PWClient, LeanPWDB
-from bson.objectid import ObjectId
-import plotly.plotly as py
-import plotly.graph_objs as go
-import plotly.tools as tls
-from slack import post_good_buy, post_good_buy_offer, post_good_sell
 
 money_string = '<b style="color: #28d020;">$</b>'
 img_dict = {'steel': 'https://politicsandwar.com/img/resources/steel.png', 'oil': 'https://politicsandwar.com/img/resources/oil.png', 'aluminum': 'https://politicsandwar.com/img/resources/aluminum.png', 'lead': 'https://politicsandwar.com/img/resources/lead.png', 'bauxite': 'https://politicsandwar.com/img/resources/bauxite.png', 'food': 'https://politicsandwar.com/img/icons/16/steak_meat.png', 'money': 'https://politicsandwar.com/img/resources/money.png', 'munition': 'https://politicsandwar.com/img/resources/munitions.png', 'uranium': 'https://politicsandwar.com/img/resources/uranium.png', 'coal': 'https://politicsandwar.com/img/resources/coal.png', 'iron': 'https://politicsandwar.com/img/resources/iron.png', 'gasoline': 'https://politicsandwar.com/img/resources/gasoline.png'}
@@ -133,24 +125,6 @@ long_term_averages = long_term_averages[-600:]
 short_term_averages = short_term_averages[-600:]
 
 # Generate charts
-plot_embeds = {}
-plot_urls = {}
-
-for item_type in realstring_dict.keys():
-    line_chart = pygal.Line(x_label_rotation=40, show_minor_x_labels=False, x_labels_major_every=96,
-                            title=item_type+": price over time", style=DarkStyle)
-    line_chart.x_labels = [r['time'].strftime("%b %e - %I:%M%p") for r in records]
-    line_chart.add("Current Price", [r['values'][item_type]['sell'] for r in records])
-    line_chart.add("10 Day Avg", [r[item_type]["sell"] for r in long_term_averages])
-    line_chart.add("3  Day Avg", [r[item_type]["sell"] for r in short_term_averages])
-
-    plot_embed = line_chart.render()
-
-    # TODO: get url?
-    plot_url = None
-
-    plot_embeds[item_type] = plot_embed
-    plot_urls[item_type] = plot_url
 
 html_string = "<table border='1' rules='all'>\n"
 html_string += \
@@ -222,6 +196,3 @@ for key in buys_higher_than_avg_sells.keys():
         if pwdb.increment_buy_offer_counter_for_type(key):
             pass # TODO: this
             # post_good_buy_offer(good, good_url, averages[key]["sell"], buys_higher_than_avg_sells[key])
-
-for key in plot_embeds:
-    print plot_embeds[key]
