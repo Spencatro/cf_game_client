@@ -3,3 +3,6 @@ pymongo
 lxml
 httplib2
 colour
+pygal
+requests
+plotly
