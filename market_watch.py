@@ -72,59 +72,58 @@ for item_type in realstring_dict.keys():
 
 result = pwdb.add_market_watch_record(resource_dict)
 
-# averages = {}
-# for item_type in realstring_dict.keys():
-#     res = pwdb.market_watch_collection.aggregate([{"$group": {"_id": None, "sell": {"$avg": "$values."+item_type+".sell"}, "buy": {"$avg": "$values."+item_type+".buy"}}}])
-#     values = res.next()
-#     averages[item_type] = {"sell": values["sell"], "buy": values["buy"]}
 
-# get recent data
-long_term_average_records = pwdb.get_recent_market_records(num_records=3000)
-short_term_average_records = long_term_average_records[-1000:]
-long_term_averages = []
-for i in range(len(long_term_average_records)):
-    current_record = long_term_average_records[i]
-    average_dict = {}
-    for item_type in realstring_dict.keys():
-        average_dict[item_type] = {"buy": 0, "sell": 0}
-        if len(long_term_averages) < 1:
-            # calc for sells
-            average_sell_at_index = current_record['values'][item_type]['sell']
-            # calc for buys
-            average_buy_at_index = current_record['values'][item_type]['buy']
-        else:
-            # fast rolling average without looping
-            average_sell_at_index = long_term_averages[-1][item_type]['sell'] * len(long_term_averages) + current_record['values'][item_type]['sell']
-            average_sell_at_index /= float(len(long_term_averages) + 1)
-            average_buy_at_index = long_term_averages[-1][item_type]['buy'] * len(long_term_averages) + current_record['values'][item_type]['buy']
-            average_buy_at_index /= float(len(long_term_averages) + 1)
-        average_dict[item_type]["sell"] = average_sell_at_index
-        average_dict[item_type]["buy"] = average_buy_at_index
-    long_term_averages.append(average_dict)
+def get_long_short_term_averages(num_records=3000):
+    # get recent data
+    long_term_average_records = pwdb.get_recent_market_records(num_records=num_records)
+    short_term_average_records = long_term_average_records[-1000:]
+    long_term_averages = []
+    for i in range(len(long_term_average_records)):
+        current_record = long_term_average_records[i]
+        average_dict = {"date": current_record['time']}
+        for item_type in realstring_dict.keys():
+            average_dict[item_type] = {"buy": 0, "sell": 0}
+            if len(long_term_averages) < 1:
+                # calc for sells
+                average_sell_at_index = current_record['values'][item_type]['sell']
+                # calc for buys
+                average_buy_at_index = current_record['values'][item_type]['buy']
+            else:
+                # fast rolling average without looping
+                average_sell_at_index = long_term_averages[-1][item_type]['sell'] * len(long_term_averages) + current_record['values'][item_type]['sell']
+                average_sell_at_index /= float(len(long_term_averages) + 1)
+                average_buy_at_index = long_term_averages[-1][item_type]['buy'] * len(long_term_averages) + current_record['values'][item_type]['buy']
+                average_buy_at_index /= float(len(long_term_averages) + 1)
+            average_dict[item_type]["sell"] = average_sell_at_index
+            average_dict[item_type]["buy"] = average_buy_at_index
+        long_term_averages.append(average_dict)
 
-short_term_averages = []
-for i in range(len(short_term_average_records)):
-    current_record = short_term_average_records[i]
-    average_dict = {}
-    for item_type in realstring_dict.keys():
-        average_dict[item_type] = {"buy": 0, "sell": 0}
-        if len(short_term_averages) < 1:
-            # calc for sells
-            average_sell_at_index = current_record['values'][item_type]['sell']
-            # calc for buys
-            average_buy_at_index = current_record['values'][item_type]['buy']
-        else:
-            # fast rolling average without looping
-            average_sell_at_index = short_term_averages[-1][item_type]['sell'] * len(short_term_averages) + current_record['values'][item_type]['sell']
-            average_sell_at_index /= float(len(short_term_averages) + 1)
-            average_buy_at_index = short_term_averages[-1][item_type]['buy'] * len(short_term_averages) + current_record['values'][item_type]['buy']
-            average_buy_at_index /= float(len(short_term_averages) + 1)
-        average_dict[item_type]["sell"] = average_sell_at_index
-        average_dict[item_type]["buy"] = average_buy_at_index
-    short_term_averages.append(average_dict)
-records = long_term_average_records[-600:]
-long_term_averages = long_term_averages[-600:]
-short_term_averages = short_term_averages[-600:]
+    short_term_averages = []
+    for i in range(len(short_term_average_records)):
+        current_record = short_term_average_records[i]
+        average_dict = {"date": current_record['time']}
+        for item_type in realstring_dict.keys():
+            average_dict[item_type] = {"buy": 0, "sell": 0}
+            if len(short_term_averages) < 1:
+                # calc for sells
+                average_sell_at_index = current_record['values'][item_type]['sell']
+                # calc for buys
+                average_buy_at_index = current_record['values'][item_type]['buy']
+            else:
+                # fast rolling average without looping
+                average_sell_at_index = short_term_averages[-1][item_type]['sell'] * len(short_term_averages) + current_record['values'][item_type]['sell']
+                average_sell_at_index /= float(len(short_term_averages) + 1)
+                average_buy_at_index = short_term_averages[-1][item_type]['buy'] * len(short_term_averages) + current_record['values'][item_type]['buy']
+                average_buy_at_index /= float(len(short_term_averages) + 1)
+            average_dict[item_type]["sell"] = average_sell_at_index
+            average_dict[item_type]["buy"] = average_buy_at_index
+        short_term_averages.append(average_dict)
+    long_term_averages = long_term_averages[-600:]
+    short_term_averages = short_term_averages[-600:]
+
+    return long_term_averages, short_term_averages
+
+lta, sta = get_long_short_term_averages()
 
 # Generate charts
 
@@ -143,8 +142,8 @@ for item_type in realstring_dict.keys():
     # Make judgements on sells
 
     current_sell = resource_dict[item_type]["sell"]
-    average_sell = long_term_averages[-1][item_type]["sell"]
-    sell_diffp = (abs(long_term_averages[-1][item_type]["sell"] - resource_dict[item_type]["sell"]) / (.5 * (long_term_averages[-1][item_type]["sell"] + resource_dict[item_type]["sell"]))) * 100
+    average_sell = lta[-1][item_type]["sell"]
+    sell_diffp = (abs(lta[-1][item_type]["sell"] - resource_dict[item_type]["sell"]) / (.5 * (lta[-1][item_type]["sell"] + resource_dict[item_type]["sell"]))) * 100
     gradient_index = 0
     if sell_diffp > 25:
         gradient_index = 99
@@ -177,7 +176,7 @@ for item_type in realstring_dict.keys():
     else:
         buys_higher_than_avg_sells[item_type] = -1
 
-    buy_diffp = (abs(long_term_averages[-1][item_type]["buy"] - resource_dict[item_type]["buy"]) / (.5 * (long_term_averages[-1][item_type]["buy"] + resource_dict[item_type]["buy"]))) * 100
+    buy_diffp = (abs(lta[-1][item_type]["buy"] - resource_dict[item_type]["buy"]) / (.5 * (lta[-1][item_type]["buy"] + resource_dict[item_type]["buy"]))) * 100
     html_string += "<tr>" \
                    "<td>"+realstring_dict[item_type].capitalize()+"</td>" \
                    "<td style='color:"+sell_color+";'>"+str(current_sell)+"</td>" \

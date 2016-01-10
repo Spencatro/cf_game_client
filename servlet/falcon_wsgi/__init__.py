@@ -14,7 +14,7 @@ __author__ = 'sxh112430'
 import sys
 sys.path.append("/var/www/falcon/pnw_stats_finder")
 sys.path.append("/var/www/falcon/pnw_stats_finder/servlet/mlibs")
-from servlet.wsgi.falcon.income_tracker import MAX_COLLECTION_TIMEDELTA
+from servlet.falcon_wsgi.falcon.income_tracker import MAX_COLLECTION_TIMEDELTA
 from servlet.settings import MAINTENANCE_MODE
 from threading import Thread
 import time
