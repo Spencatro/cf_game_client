@@ -15,3 +15,5 @@ def market_data(days):
     pwdb = LeanPWDB()
     long_term_averages, short_term_averages = get_long_short_term_averages(pwdb)
     return jsonify({"long_term_averages": long_term_averages, "short_term_averages": short_term_averages})
+
+app.run("0.0.0.0", 8090)
