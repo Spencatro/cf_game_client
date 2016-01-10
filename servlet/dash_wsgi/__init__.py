@@ -13,7 +13,10 @@ def hw():
 @app.route('/graph_data/market/days=<days>')
 def market_data(days):
     pwdb = LeanPWDB()
-    long_term_averages, short_term_averages = get_long_short_term_averages(pwdb)
+    total_minutes = days * 24 * 60
+    num_records = total_minutes / 5
+    long_term_averages, short_term_averages = get_long_short_term_averages(pwdb, num_records)
     return jsonify({"long_term_averages": long_term_averages, "short_term_averages": short_term_averages})
 
-app.run("0.0.0.0", 8090)
+if __name__=="__main__":
+    app.run("0.0.0.0", 8090)
