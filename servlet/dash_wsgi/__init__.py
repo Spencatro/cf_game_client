@@ -10,7 +10,7 @@ app = Flask(__name__)
 def hw():
     return "welcome to the dashboard api. this doesn't do anything. what are you doing here? get out."
 
-@app.route('/graph_data/market/days=<days>')
+@app.route('/graph_data/market/days=<int:days>')
 def market_data(days):
     pwdb = LeanPWDB()
     total_minutes = days * 24 * 60
