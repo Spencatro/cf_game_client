@@ -9,7 +9,8 @@ __author__ = 'shawkins'
 app = Flask(__name__)
 
 
-def crossdomain(origin=None, methods=None, headers=None,
+# needed since api.gitsubmit is a different domain than gitsubmit
+def crossdomain(app=None, origin=None, methods=None, headers='Origin, X-Requested-With, Content-Type, Authorization, Accept',
                 max_age=21600, attach_to_all=True,
                 automatic_options=True):
     if methods is not None:
@@ -42,6 +43,7 @@ def crossdomain(origin=None, methods=None, headers=None,
             h['Access-Control-Allow-Origin'] = origin
             h['Access-Control-Allow-Methods'] = get_methods()
             h['Access-Control-Max-Age'] = str(max_age)
+            h['Access-Control-Expose-Headers'] = 'is_tree'
             if headers is not None:
                 h['Access-Control-Allow-Headers'] = headers
             return resp
@@ -49,14 +51,13 @@ def crossdomain(origin=None, methods=None, headers=None,
         f.provide_automatic_options = False
         return update_wrapper(wrapped_function, f)
     return decorator
-
 @app.route('/')
-@crossdomain(origin='*')
+@crossdomain(app=app, origin='*')
 def hw():
     return "welcome to the dashboard api. this doesn't do anything. what are you doing here? get out."
 
 @app.route('/graph_data/market/days=<int:days>')
-@crossdomain(origin='*')
+@crossdomain(app=app, origin='*')
 def market_data(days):
     pwdb = LeanPWDB()
     total_minutes = days * 24 * 60
