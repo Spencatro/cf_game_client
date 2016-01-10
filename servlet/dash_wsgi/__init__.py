@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-from market_watch import get_long_short_term_averages
+from market import get_long_short_term_averages
 from pw_client import LeanPWDB
 
 __author__ = 'shawkins'
