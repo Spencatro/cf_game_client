@@ -1,5 +1,6 @@
 from flask import Flask, jsonify
 from market_watch import get_long_short_term_averages
+from pw_client import LeanPWDB
 
 __author__ = 'shawkins'
 
@@ -11,5 +12,6 @@ def hw():
 
 @app.route('/graph_data/market/days=<days>')
 def market_data(days):
-    long_term_averages, short_term_averages = get_long_short_term_averages()
+    pwdb = LeanPWDB()
+    long_term_averages, short_term_averages = get_long_short_term_averages(pwdb)
     return jsonify({"long_term_averages": long_term_averages, "short_term_averages": short_term_averages})

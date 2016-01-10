@@ -1,14 +1,13 @@
 import logging
 import os
 from colour import Color
+from market import realstring_dict, get_long_short_term_averages
 from pw_client import PWClient, LeanPWDB
 from bson.objectid import ObjectId
 from slack import post_good_buy, post_good_buy_offer, post_good_sell
 
 money_string = '<b style="color: #28d020;">$</b>'
 img_dict = {'steel': 'https://politicsandwar.com/img/resources/steel.png', 'oil': 'https://politicsandwar.com/img/resources/oil.png', 'aluminum': 'https://politicsandwar.com/img/resources/aluminum.png', 'lead': 'https://politicsandwar.com/img/resources/lead.png', 'bauxite': 'https://politicsandwar.com/img/resources/bauxite.png', 'food': 'https://politicsandwar.com/img/icons/16/steak_meat.png', 'money': 'https://politicsandwar.com/img/resources/money.png', 'munition': 'https://politicsandwar.com/img/resources/munitions.png', 'uranium': 'https://politicsandwar.com/img/resources/uranium.png', 'coal': 'https://politicsandwar.com/img/resources/coal.png', 'iron': 'https://politicsandwar.com/img/resources/iron.png', 'gasoline': 'https://politicsandwar.com/img/resources/gasoline.png'}
-realstring_dict = {'steel': 'steel', 'oil': 'oil', 'lead': 'lead', 'aluminum': 'aluminum', 'munition': 'munitions', 'food': 'food', 'bauxite': 'bauxite', 'uranium': 'uranium', 'coal': 'coal', 'iron': 'iron', 'gasoline': 'gasoline'}
-
 
 def make_trade_url(good, ascending=True, sell=True):
     if sell:
@@ -72,58 +71,7 @@ for item_type in realstring_dict.keys():
 
 result = pwdb.add_market_watch_record(resource_dict)
 
-
-def get_long_short_term_averages(num_records=3000):
-    # get recent data
-    long_term_average_records = pwdb.get_recent_market_records(num_records=num_records)
-    short_term_average_records = long_term_average_records[-1000:]
-    long_term_averages = []
-    for i in range(len(long_term_average_records)):
-        current_record = long_term_average_records[i]
-        average_dict = {"date": current_record['time']}
-        for item_type in realstring_dict.keys():
-            average_dict[item_type] = {"buy": 0, "sell": 0}
-            if len(long_term_averages) < 1:
-                # calc for sells
-                average_sell_at_index = current_record['values'][item_type]['sell']
-                # calc for buys
-                average_buy_at_index = current_record['values'][item_type]['buy']
-            else:
-                # fast rolling average without looping
-                average_sell_at_index = long_term_averages[-1][item_type]['sell'] * len(long_term_averages) + current_record['values'][item_type]['sell']
-                average_sell_at_index /= float(len(long_term_averages) + 1)
-                average_buy_at_index = long_term_averages[-1][item_type]['buy'] * len(long_term_averages) + current_record['values'][item_type]['buy']
-                average_buy_at_index /= float(len(long_term_averages) + 1)
-            average_dict[item_type]["sell"] = average_sell_at_index
-            average_dict[item_type]["buy"] = average_buy_at_index
-        long_term_averages.append(average_dict)
-
-    short_term_averages = []
-    for i in range(len(short_term_average_records)):
-        current_record = short_term_average_records[i]
-        average_dict = {"date": current_record['time']}
-        for item_type in realstring_dict.keys():
-            average_dict[item_type] = {"buy": 0, "sell": 0}
-            if len(short_term_averages) < 1:
-                # calc for sells
-                average_sell_at_index = current_record['values'][item_type]['sell']
-                # calc for buys
-                average_buy_at_index = current_record['values'][item_type]['buy']
-            else:
-                # fast rolling average without looping
-                average_sell_at_index = short_term_averages[-1][item_type]['sell'] * len(short_term_averages) + current_record['values'][item_type]['sell']
-                average_sell_at_index /= float(len(short_term_averages) + 1)
-                average_buy_at_index = short_term_averages[-1][item_type]['buy'] * len(short_term_averages) + current_record['values'][item_type]['buy']
-                average_buy_at_index /= float(len(short_term_averages) + 1)
-            average_dict[item_type]["sell"] = average_sell_at_index
-            average_dict[item_type]["buy"] = average_buy_at_index
-        short_term_averages.append(average_dict)
-    long_term_averages = long_term_averages[-600:]
-    short_term_averages = short_term_averages[-600:]
-
-    return long_term_averages, short_term_averages
-
-lta, sta = get_long_short_term_averages()
+lta, sta = get_long_short_term_averages(pwdb)
 
 # Generate charts
 
