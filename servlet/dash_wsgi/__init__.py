@@ -50,13 +50,13 @@ def crossdomain(origin=None, methods=None, headers=None,
         return update_wrapper(wrapped_function, f)
     return decorator
 
-@crossdomain('*')
 @app.route('/')
+@crossdomain(origin='*')
 def hw():
     return "welcome to the dashboard api. this doesn't do anything. what are you doing here? get out."
 
-@crossdomain('*')
 @app.route('/graph_data/market/days=<int:days>')
+@crossdomain(origin='*')
 def market_data(days):
     pwdb = LeanPWDB()
     total_minutes = days * 24 * 60
