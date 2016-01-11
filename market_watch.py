@@ -90,8 +90,8 @@ for item_type in realstring_dict.keys():
     # Make judgements on sells
 
     current_sell = resource_dict[item_type]["sell"]
-    average_sell = lta[-1][item_type]["sell"]
-    sell_diffp = (abs(lta[-1][item_type]["sell"] - resource_dict[item_type]["sell"]) / (.5 * (lta[-1][item_type]["sell"] + resource_dict[item_type]["sell"]))) * 100
+    average_sell = lta[-1][item_type + "avg_sell"]
+    sell_diffp = (abs(lta[-1][item_type+"avg_sell"] - resource_dict[item_type]["sell"]) / (.5 * (lta[-1][item_type + "avg_sell"] + resource_dict[item_type]["sell"]))) * 100
     gradient_index = 0
     if sell_diffp > 25:
         gradient_index = 99
@@ -124,7 +124,7 @@ for item_type in realstring_dict.keys():
     else:
         buys_higher_than_avg_sells[item_type] = -1
 
-    buy_diffp = (abs(lta[-1][item_type]["buy"] - resource_dict[item_type]["buy"]) / (.5 * (lta[-1][item_type]["buy"] + resource_dict[item_type]["buy"]))) * 100
+    buy_diffp = (abs(lta[-1][item_type + "avg_buy"] - resource_dict[item_type]["buy"]) / (.5 * (lta[-1][item_type + "avg_buy"] + resource_dict[item_type]["buy"]))) * 100
     html_string += "<tr>" \
                    "<td>"+realstring_dict[item_type].capitalize()+"</td>" \
                    "<td style='color:"+sell_color+";'>"+str(current_sell)+"</td>" \

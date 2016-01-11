@@ -11,7 +11,6 @@ def get_long_short_term_averages(pwdb, num_records=3000):
         current_record = long_term_average_records[i]
         average_dict = {"date": current_record['time']}
         for item_type in realstring_dict.keys():
-            average_dict[item_type] = {"buy": 0, "sell": 0}
             if len(long_term_averages) < 1:
                 # calc for sells
                 average_sell_at_index = current_record['values'][item_type]['sell']
@@ -19,12 +18,14 @@ def get_long_short_term_averages(pwdb, num_records=3000):
                 average_buy_at_index = current_record['values'][item_type]['buy']
             else:
                 # fast rolling average without looping
-                average_sell_at_index = long_term_averages[-1][item_type]['sell'] * len(long_term_averages) + current_record['values'][item_type]['sell']
+                average_sell_at_index = long_term_averages[-1][item_type + 'avg_sell'] * len(long_term_averages) + current_record['values'][item_type]['sell']
                 average_sell_at_index /= float(len(long_term_averages) + 1)
-                average_buy_at_index = long_term_averages[-1][item_type]['buy'] * len(long_term_averages) + current_record['values'][item_type]['buy']
+                average_buy_at_index = long_term_averages[-1][item_type + 'avg_buy'] * len(long_term_averages) + current_record['values'][item_type]['buy']
                 average_buy_at_index /= float(len(long_term_averages) + 1)
-            average_dict[item_type]["sell"] = average_sell_at_index
-            average_dict[item_type]["buy"] = average_buy_at_index
+            average_dict[item_type + "avg_sell"] = average_sell_at_index
+            average_dict[item_type + "avg_buy"] = average_buy_at_index
+            average_dict[item_type + "buy"] = current_record['values'][item_type]["buy"]
+            average_dict[item_type + "sell"] = current_record['values'][item_type]["sell"]
         long_term_averages.append(average_dict)
 
     short_term_averages = []
@@ -32,7 +33,6 @@ def get_long_short_term_averages(pwdb, num_records=3000):
         current_record = short_term_average_records[i]
         average_dict = {"date": current_record['time']}
         for item_type in realstring_dict.keys():
-            average_dict[item_type] = {"buy": 0, "sell": 0}
             if len(short_term_averages) < 1:
                 # calc for sells
                 average_sell_at_index = current_record['values'][item_type]['sell']
@@ -40,12 +40,14 @@ def get_long_short_term_averages(pwdb, num_records=3000):
                 average_buy_at_index = current_record['values'][item_type]['buy']
             else:
                 # fast rolling average without looping
-                average_sell_at_index = short_term_averages[-1][item_type]['sell'] * len(short_term_averages) + current_record['values'][item_type]['sell']
+                average_sell_at_index = short_term_averages[-1][item_type + 'avg_sell'] * len(short_term_averages) + current_record['values'][item_type]['sell']
                 average_sell_at_index /= float(len(short_term_averages) + 1)
-                average_buy_at_index = short_term_averages[-1][item_type]['buy'] * len(short_term_averages) + current_record['values'][item_type]['buy']
+                average_buy_at_index = short_term_averages[-1][item_type + 'avg_buy'] * len(short_term_averages) + current_record['values'][item_type]['buy']
                 average_buy_at_index /= float(len(short_term_averages) + 1)
-            average_dict[item_type]["sell"] = average_sell_at_index
-            average_dict[item_type]["buy"] = average_buy_at_index
+            average_dict[item_type + "avg_sell"] = average_sell_at_index
+            average_dict[item_type + "avg_buy"] = average_buy_at_index
+            average_dict[item_type + "buy"] = current_record['values'][item_type]["buy"]
+            average_dict[item_type + "sell"] = current_record['values'][item_type]["sell"]
         short_term_averages.append(average_dict)
     long_term_averages = long_term_averages[-600:]
     short_term_averages = short_term_averages[-600:]
