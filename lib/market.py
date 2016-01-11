@@ -11,7 +11,7 @@ def get_long_short_term_averages(pwdb, num_records=3000):
     long_term_averages = []
     for i in range(len(long_term_average_records)):
         current_record = long_term_average_records[i]
-        formatted_time = datetime.strftime(current_record['time'], "%m-%d-%y %H:%M:%S")
+        formatted_time = datetime.strftime(current_record['time'], "%y-%m-%d %H:%M:%S")
         average_dict = {"date": current_record['time'],
                         "morris_date": formatted_time}
         for item_type in realstring_dict.keys():
