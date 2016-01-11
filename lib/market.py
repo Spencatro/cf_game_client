@@ -1,3 +1,5 @@
+from datetime import datetime
+
 realstring_dict = {'steel': 'steel', 'oil': 'oil', 'lead': 'lead', 'aluminum': 'aluminum', 'munition': 'munitions', 'food': 'food', 'bauxite': 'bauxite', 'uranium': 'uranium', 'coal': 'coal', 'iron': 'iron', 'gasoline': 'gasoline'}
 
 __author__ = 'shawkins'
@@ -9,7 +11,9 @@ def get_long_short_term_averages(pwdb, num_records=3000):
     long_term_averages = []
     for i in range(len(long_term_average_records)):
         current_record = long_term_average_records[i]
-        average_dict = {"date": current_record['time']}
+        formatted_time = datetime.strftime(current_record['time'], "%m-%d-%y %H:%M:%S")
+        average_dict = {"date": current_record['time'],
+                        "morris_date": formatted_time}
         for item_type in realstring_dict.keys():
             if len(long_term_averages) < 1:
                 # calc for sells
