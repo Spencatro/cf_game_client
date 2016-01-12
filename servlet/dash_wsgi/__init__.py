@@ -1,7 +1,7 @@
 from datetime import timedelta
 from functools import update_wrapper
 from flask import Flask, jsonify, request, make_response
-from market import get_long_short_term_averages
+from market import get_long_short_term_averages, realstring_dict
 from pw_client import LeanPWDB
 
 __author__ = 'shawkins'
@@ -64,7 +64,9 @@ def market_data(days):
     num_records = total_minutes / 5
     long_term_averages, short_term_averages = get_long_short_term_averages(pwdb, num_records)
     last_record = long_term_averages[-1]
-    return jsonify({"long_term_averages": long_term_averages, "short_term_averages": short_term_averages, "last": last_record})
+    types = realstring_dict.values()
+    return jsonify({"long_term_averages": long_term_averages, "short_term_averages": short_term_averages,
+                    "last": last_record, types: types})
 
 
 if __name__=="__main__":
