@@ -63,8 +63,8 @@ def market_data(days):
     total_minutes = days * 24 * 60
     num_records = total_minutes / 5
     long_term_averages, short_term_averages = get_long_short_term_averages(pwdb)
-    long_term_averages = long_term_averages[-num_records]
-    short_term_averages = short_term_averages[-num_records]
+    long_term_averages = long_term_averages[-num_records:]
+    short_term_averages = short_term_averages[-num_records:]
     last_record = long_term_averages[-1]
     types = realstring_dict.keys()
     return jsonify({"long_term_averages": long_term_averages, "short_term_averages": short_term_averages,
