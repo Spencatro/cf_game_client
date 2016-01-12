@@ -66,7 +66,7 @@ def market_data(days):
     last_record = long_term_averages[-1]
     types = realstring_dict.values()
     return jsonify({"long_term_averages": long_term_averages, "short_term_averages": short_term_averages,
-                    "last": last_record, types: types})
+                    "last": last_record, "types": types})
 
 
 if __name__=="__main__":
