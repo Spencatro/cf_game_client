@@ -56,14 +56,16 @@ def crossdomain(app=None, origin=None, methods=None, headers='Origin, X-Requeste
 def hw():
     return "welcome to the dashboard api, nerd. this doesn't do anything. what are you doing here? get out."
 
-@app.route('/graph_data/market/days=<int:days>')
+@app.route('/graph_data/market/days=<int:days>/')
 @crossdomain(app=app, origin='*', methods=["GET"])
 def market_data(days):
     pwdb = LeanPWDB()
     total_minutes = days * 24 * 60
     num_records = total_minutes / 5
     long_term_averages, short_term_averages = get_long_short_term_averages(pwdb, num_records)
-    return jsonify({"long_term_averages": long_term_averages, "short_term_averages": short_term_averages})
+    last_record = long_term_averages[-1]
+    return jsonify({"long_term_averages": long_term_averages, "short_term_averages": short_term_averages, "last": last_record})
+
 
 if __name__=="__main__":
     app.run("0.0.0.0", 8090)
