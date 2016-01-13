@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>SB Admin 2 - Bootstrap Admin Theme</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="../bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- MetisMenu CSS -->
+    <link href="../bower_components/metisMenu/dist/metisMenu.min.css" rel="stylesheet">
+
+    <!-- Timeline CSS -->
+    <link href="../dist/css/timeline.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="../dist/css/sb-admin-2.css" rel="stylesheet">
+
+    <!-- Morris Charts CSS -->
+    <link href="../bower_components/morrisjs/morris.css" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <link href="../bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body>
+
+    <div id="wrapper">
+
+        <!-- Navigation -->
+        <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="index.html">Charming Friends Dashboard</a>
+            </div>
+            <!-- /.navbar-header -->
+            <div class="navbar-default sidebar" role="navigation">
+                <div class="sidebar-nav navbar-collapse">
+                    <ul class="nav" id="side-menu">
+                        <li>
+                            <a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
+                        </li>
+                        <li>
+                            <a href="tables.html"><i class="fa fa-bar-chart-o fa-fw"></i> Market Graphs</a>
+                        </li>
+                        <li>
+                            <a href="forms.html"><i class="fa fa-money fa-fw"></i> Bank Pulse</a>
+                        </li>
+                        <li>
+                            <a href="forms.html"><i class="fa fa-users fa-fw"></i> Alliance Monitor</a>
+                        </li>
+                        <li>
+                            <a href="#"><i class="fa fa-wrench fa-fw"></i> UI Elements<span class="fa arrow"></span></a>
+                            <ul class="nav nav-second-level">
+                                <li>
+                                    <a href="panels-wells.html">Panels and Wells</a>
+                                </li>
+                                <li>
+                                    <a href="buttons.html">Buttons</a>
+                                </li>
+                                <li>
+                                    <a href="notifications.html">Notifications</a>
+                                </li>
+                                <li>
+                                    <a href="typography.html">Typography</a>
+                                </li>
+                                <li>
+                                    <a href="icons.html"> Icons</a>
+                                </li>
+                                <li>
+                                    <a href="grid.html">Grid</a>
+                                </li>
+                            </ul>
+                            <!-- /.nav-second-level -->
+                        </li>
+                        <li>
+                            <a href="#"><i class="fa fa-sitemap fa-fw"></i> Multi-Level Dropdown<span class="fa arrow"></span></a>
+                            <ul class="nav nav-second-level">
+                                <li>
+                                    <a href="#">Second Level Item</a>
+                                </li>
+                                <li>
+                                    <a href="#">Second Level Item</a>
+                                </li>
+                                <li>
+                                    <a href="#">Third Level <span class="fa arrow"></span></a>
+                                    <ul class="nav nav-third-level">
+                                        <li>
+                                            <a href="#">Third Level Item</a>
+                                        </li>
+                                        <li>
+                                            <a href="#">Third Level Item</a>
+                                        </li>
+                                        <li>
+                                            <a href="#">Third Level Item</a>
+                                        </li>
+                                        <li>
+                                            <a href="#">Third Level Item</a>
+                                        </li>
+                                    </ul>
+                                    <!-- /.nav-third-level -->
+                                </li>
+                            </ul>
+                            <!-- /.nav-second-level -->
+                        </li>
+                        <li>
+                            <a href="#"><i class="fa fa-files-o fa-fw"></i> Sample Pages<span class="fa arrow"></span></a>
+                            <ul class="nav nav-second-level">
+                                <li>
+                                    <a href="blank.html">Blank Page</a>
+                                </li>
+                                <li>
+                                    <a href="login.html">Login Page</a>
+                                </li>
+                            </ul>
+                            <!-- /.nav-second-level -->
+                        </li>
+                    </ul>
+                </div>
+                <!-- /.sidebar-collapse -->
+            </div>
+            <!-- /.navbar-static-side -->
+        </nav>
+
+        <div id="page-wrapper">
+            <div class="row">
+                <div class="col-lg-12">
+                    <h1 class="page-header">Dashboard</h1>
+                </div>
+                <!-- /.col-lg-12 -->
+            </div>
+            <!-- /.row -->
+            <div class="row">
+
+                <div class="col-lg-3">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bell fa-fw"></i> Trade Quick-Glances
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div class="list-group">
+                                <a href="https://politicsandwar.com/index.php?id=90&display=world&resource1=coal&buysell=sell&ob=price&od=ASC&maximum=15&minimum=0&search=Go" class="list-group-item">
+                                    <img src="../dist/img/coal.png" /> Coal <span id="coal-cost" style="color: green">...</span>
+                                    <span id="coal-percent" class="pull-right text-muted small"><em>...</em>
+                                    </span>
+                                </a>
+                                <a href="https://politicsandwar.com/index.php?id=90&display=world&resource1=oil&buysell=sell&ob=price&od=ASC&maximum=15&minimum=0&search=Go" class="list-group-item">
+                                    <img src="../dist/img/oil.png" /> Oil <span id="oil-cost" style="color: green">...</span>
+                                    <span id="oil-percent" class="pull-right text-muted small"><em>...</em>
+                                    </span>
+                                </a>
+                                <a href="https://politicsandwar.com/index.php?id=90&display=world&resource1=uranium&buysell=sell&ob=price&od=ASC&maximum=15&minimum=0&search=Go" class="list-group-item">
+                                    <img src="../dist/img/uranium.png" /> Uranium <span id="uranium-cost" style="color: green">...</span>
+                                    <span id="uranium-percent" class="pull-right text-muted small"><em>...</em>
+                                    </span>
+                                </a>
+                                <a href="https://politicsandwar.com/index.php?id=90&display=world&resource1=lead&buysell=sell&ob=price&od=ASC&maximum=15&minimum=0&search=Go" class="list-group-item">
+                                    <img src="../dist/img/lead.png" /> Lead <span id="lead-cost" style="color: green">...</span>
+                                    <span id="lead-percent" class="pull-right text-muted small"><em>...</em>
+                                    </span>
+                                </a>
+                                <a href="https://politicsandwar.com/index.php?id=90&display=world&resource1=iron&buysell=sell&ob=price&od=ASC&maximum=15&minimum=0&search=Go" class="list-group-item">
+                                    <img src="../dist/img/iron.png" /> Iron <span id="iron-cost" style="color: green">...</span>
+                                    <span id="iron-percent" class="pull-right text-muted small"><em>...</em>
+                                    </span>
+                                </a>
+                                <a href="https://politicsandwar.com/index.php?id=90&display=world&resource1=bauxite&buysell=sell&ob=price&od=ASC&maximum=15&minimum=0&search=Go" class="list-group-item">
+                                    <img src="../dist/img/bauxite.png" /> Bauxite <span id="bauxite-cost" style="color: green">...</span>
+                                    <span id="bauxite-percent" class="pull-right text-muted small"><em>...</em>
+                                    </span>
+                                </a>
+                                <a href="https://politicsandwar.com/index.php?id=90&display=world&resource1=gasoline&buysell=sell&ob=price&od=ASC&maximum=15&minimum=0&search=Go" class="list-group-item">
+                                    <img src="../dist/img/gasoline.png" /> Gasoline <span id="gasoline-cost" style="color: green">...</span>
+                                    <span id="gasoline-percent" class="pull-right text-muted small"><em>...</em>
+                                    </span>
+                                </a>
+                                <a href="https://politicsandwar.com/index.php?id=90&display=world&resource1=munitions&buysell=sell&ob=price&od=ASC&maximum=15&minimum=0&search=Go" class="list-group-item">
+                                    <img src="../dist/img/munition.png" /> Ammo <span id="munition-cost" style="color: green">...</span>
+                                    <span id="munition-percent" class="pull-right text-muted small"><em>...</em>
+                                    </span>
+                                </a>
+                                <a href="https://politicsandwar.com/index.php?id=90&display=world&resource1=steel&buysell=sell&ob=price&od=ASC&maximum=15&minimum=0&search=Go" class="list-group-item">
+                                    <img src="../dist/img/steel.png" /> Steel <span id="steel-cost" style="color: green">...</span>
+                                    <span id="steel-percent" class="pull-right text-muted small"><em>...</em>
+                                    </span>
+                                </a>
+                                <a href="https://politicsandwar.com/index.php?id=90&display=world&resource1=aluminum&buysell=sell&ob=price&od=ASC&maximum=15&minimum=0&search=Go" class="list-group-item">
+                                    <img src="../dist/img/aluminum.png" /> Aluminum <span id="aluminum-cost" style="color: green">...</span>
+                                    <span id="aluminum-percent" class="pull-right text-muted small"><em>...</em>
+                                    </span>
+                                </a>
+                                <a href="https://politicsandwar.com/index.php?id=90&display=world&resource1=food&buysell=sell&ob=price&od=ASC&maximum=15&minimum=0&search=Go" class="list-group-item">
+                                    <img src="../dist/img/food.png" /> Food <span id="food-cost" style="color: green">...</span>
+                                    <span id="food-percent" class="pull-right text-muted small"><em>...</em>
+                                    </span>
+                                </a>
+                            </div>
+                            <!-- /.list-group -->
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <!-- /.panel -->
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> Donut Chart Example
+                        </div>
+                        <div class="panel-body">
+                            <div id="morris-donut-chart"></div>
+                            <a href="#" class="btn btn-default btn-block">View Details</a>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <!-- /.panel -->
+                </div>
+                <!-- /.col-lg-4 -->
+                <div class="col-lg-9">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> <img src="../dist/img/coal.png" /> <b>Coal</b>: price and avg over time
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div id="morris-coal"></div>
+                            <img id="coal-loading" src="../dist/img/spin.svg">
+                            <div class="legend"></div>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> <img src="../dist/img/oil.png" /> <b>Oil</b>: price and avg over time
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div id="morris-oil"></div>
+                            <img id="oil-loading" src="../dist/img/spin.svg">
+                            <div class="legend"></div>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> <img src="../dist/img/uranium.png" /> <b>Uranium</b>: price and avg over time
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div id="morris-uranium"></div>
+                            <img id="uranium-loading" src="../dist/img/spin.svg">
+                            <div class="legend"></div>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> <img src="../dist/img/lead.png" /> <b>Lead</b>: price and avg over time
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div id="morris-lead"></div>
+                            <img id="lead-loading" src="../dist/img/spin.svg">
+                            <div class="legend"></div>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> <img src="../dist/img/iron.png" /> <b>Iron</b>: price and avg over time
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div id="morris-iron"></div>
+                            <img id="iron-loading" src="../dist/img/spin.svg">
+                            <div class="legend"></div>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> <img src="../dist/img/bauxite.png" /> <b>Bauxite</b>: price and avg over time
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div id="morris-bauxite"></div>
+                            <img id="bauxite-loading" src="../dist/img/spin.svg">
+                            <div class="legend"></div>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> <img src="../dist/img/gasoline.png" /> <b>Gasoline</b>: price and avg over time
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div id="morris-gasoline"></div>
+                            <img id="gasoline-loading" src="../dist/img/spin.svg">
+                            <div class="legend"></div>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> <img src="../dist/img/munition.png" /> <b>Ammo</b>: price and avg over time
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div id="morris-munition"></div>
+                            <img id="munition-loading" src="../dist/img/spin.svg">
+                            <div class="legend"></div>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> <img src="../dist/img/steel.png" /> <b>Steel</b>: price and avg over time
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div id="morris-steel"></div>
+                            <img id="steel-loading" src="../dist/img/spin.svg">
+                            <div class="legend"></div>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> <img src="../dist/img/aluminum.png" /> <b>Aluminum</b>: price and avg over time
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div id="morris-aluminum"></div>
+                            <img id="aluminum-loading" src="../dist/img/spin.svg">
+                            <div class="legend"></div>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> <img src="../dist/img/food.png" /> <b>Food</b>: price and avg over time
+                        </div>
+                        <!-- /.panel-heading -->
+                        <div class="panel-body">
+                            <div id="morris-food"></div>
+                            <img id="food-loading" src="../dist/img/spin.svg">
+                            <div class="legend"></div>
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <!-- /.panel -->
+                </div>
+                <!-- /.col-lg-8 -->
+            </div>
+            <!-- /.row -->
+        </div>
+        <!-- /#page-wrapper -->
+
+    </div>
+    <!-- /#wrapper -->
+
+    <!-- jQuery -->
+    <script src="../bower_components/jquery/dist/jquery.min.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="../bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+
+    <!-- Metis Menu Plugin JavaScript -->
+    <script src="../bower_components/metisMenu/dist/metisMenu.min.js"></script>
+
+    <!-- Morris Charts JavaScript -->
+    <script src="../bower_components/raphael/raphael-min.js"></script>
+    <script src="../bower_components/morrisjs/morris.min.js"></script>
+    <script src="../js/morris-data.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="../dist/js/sb-admin-2.js"></script>
+
+</body>
+
+</html>
