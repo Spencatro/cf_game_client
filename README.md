@@ -1,6 +1,7 @@
-PNW Stats Finder
+CF Game Client
 ==============
-This is a simple tool to help better understand the data in pnw.
+
+This is a set of tools that connect to an online game to help collect data and make decisions
 
 Requirements
 ----------------
@@ -11,6 +12,6 @@ Requirements
 
 Usage
 -------
-Keep your username and password in your environment variables, under `PWUSER` and `PWPASS` in order to authenticate in with your account in PnW.
+Keep your username and password in your environment variables, under `PWUSER` and `PWPASS` in order to authenticate in with your account.
 
 
