@@ -35,6 +35,7 @@ PASS = os.environ['PW_PASS']
 pwc = PWClient(USERNAME, PASS, logger=logger)
 
 infos = []
+goods = []
 for nation in pwc.get_list_of_alliance_members_from_alliance_name("Charming Friends"):
     today = datetime.now()
     min_days = 9000
@@ -47,7 +48,14 @@ for nation in pwc.get_list_of_alliance_members_from_alliance_name("Charming Frie
     info = [nation.name, len(nation.cities), ''.join(most_recent_city.splitlines()), min_days]
     if min_days > 10:
         infos.append(info)
+    else:
+        goods.append(info)
 
 headers=["Nation", "# cities", "Most recent city ..............", "Days since built"]
 
-print matrix_to_table(infos, headers)
+if len(infos) > 0:
+    print "<h1>Nations off cooldown (ready to build)</h1>"
+    print matrix_to_table(infos, headers)
+if len(goods) > 0:
+    print "<h1>Nations off cooldown (good job!)</h1>"
+    print matrix_to_table(goods, headers)
