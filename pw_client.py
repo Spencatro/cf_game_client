@@ -1221,6 +1221,9 @@ class LeanPWDB(object):
     def cache_nation_list(self, nation_list):
         self.nation_cache_collection.insert(nation_list)
 
+    def get_latest_nation_cache_list(self):
+        return self.nation_cache_collection.find().sort("_id", pymongo.DESCENDING)[0]
+
     def reset_buy_counter(self, item_type):
         self._reset_counter(item_type, "buy")
 

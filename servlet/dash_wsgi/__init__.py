@@ -77,81 +77,32 @@ def market_data(days):
 @app.route('/defendability/')
 @crossdomain(app=app, origin='*', methods=["GET"])
 def defendability():
-    USERNAME = os.environ['PW_USER']
-    PASS = os.environ['PW_PASS']
-    pwc = PWClient(USERNAME, PASS)
-    nations = list(pwc.get_list_of_alliance_members_from_alliance_name("Charming Friends"))
-    nations_sorted = sorted(nations, key=lambda nid: nid.military.get_score() / nid.score)
+    pwdb = LeanPWDB()
+    latest_list = pwdb.get_latest_nation_cache_list()
     nations_out = []
     avg_def_factor = 0
-    for nation in nations_sorted:
-
-        max_score_can_be_declared_by = nation.score / 0.75
-        min_score_can_be_declared_by = nation.score / 1.75
-
-        holes_above = 0
-        holes_below = 0
-
-        spread = max_score_can_be_declared_by - min_score_can_be_declared_by
-
-        total_defendability = 0
-        total_checked = 0
-        # print "checking", nation.name, nation.score
-        print min_score_can_be_declared_by, max_score_can_be_declared_by
-        for other in nations_sorted:
-            if nation == other:
-                continue
-
-            # print "\t", other.name, other.score
-
-            max_score_can_declare_on = other.score * 1.75
-            min_score_can_declare_on = other.score * 0.75
-
-            # print "\t", min_score_can_declare_on, max_score_can_declare_on
-
-            covered_min = max(min_score_can_be_declared_by, min_score_can_declare_on)
-            covered_max = min(max_score_can_be_declared_by, max_score_can_declare_on)
-
-            covered = covered_max - covered_min
-
-            covered_percentage = float(covered) / float(spread)
-            covered_percentage = max(covered_percentage, 0)
-            total_defendability += covered_percentage
-            total_checked += 1
-
-            count = 0
-
-            if covered_min > min_score_can_be_declared_by:
-                # print "\thole below +1"
-                count += 1
-                holes_below += (1 - covered_percentage)
-            if covered_max < max_score_can_be_declared_by:
-                # print "\thole above +1"
-                count += 1
-                holes_above += (1 - covered_percentage)
-
-        def_factor = total_defendability / float(total_checked)
-
+    for nation in latest_list["nations"]:
+        def_factor = nation["defendability_factor"]
         avg_def_factor += def_factor
 
-        vuln_factor = holes_below - holes_above
-        obj_out = {'name': nation.name,
-                   'id': nation.nation_id,
-                   'score': nation.score,
-                   'percent_military_score': 100.0 * nation.military.get_score() / nation.score,
-                   'def_factor': 100 * def_factor,
-                   'action_priority': 100 * vuln_factor / float(len(nations))}
+        action_priority = nation["action_priority"]
+
+        obj_out = {'name': nation["name"],
+                   'id': nation["nation_id"],
+                   'score': nation["score"],
+                   'percent_military_score': nation["percent_score_military"],
+                   'def_factor': def_factor,
+                   'action_priority': action_priority}
 
         nations_out.append(obj_out)
-    avg_def_factor /= float(len(nations))
-    avg_def_factor *= 100
+    avg_def_factor /= float(len(latest_list["nations"]))
     return jsonify({"list": nations_out, "avg_def_factor": avg_def_factor})
-
 
 
 @app.route('/dashboard_beta/')
 def dashboard_beta():
     return render_template('pages/index.html')
 
+app.debug = True
 if __name__ == "__main__":
-    app.run("0.0.0.0", 8090)
+    app.run("0.0.0.0", 8091)
