@@ -1,6 +1,5 @@
 import json
 import os
-import pprint
 
 import jsonpickle
 
@@ -62,12 +61,6 @@ for nation in nations_sorted:
     nation.percent_score_military = 100.0 * nation.military.score / float(nation.score)
     nation.defendability_factor = 100.0 * def_factor
     nation.action_priority = 100.0 * vuln_factor / float(len(nations))
-    print "wtf, here we go"
-    jsonpickle.encode(nation)
-    print "success 1"
-    jsonpickle.encode(nation, unpicklable=False)
-    print "success 2"
-    json.loads(jsonpickle.encode(nation, unpicklable=False))
 
     db_object['nations'].append(json.loads(jsonpickle.encode(nation, unpicklable=False)))
 
