@@ -29,18 +29,12 @@ for nation in nations_sorted:
 
     total_defendability = 0
     total_checked = 0
-    # print "checking", nation.name, nation.score
-    print min_score_can_be_declared_by, max_score_can_be_declared_by
     for other in nations_sorted:
         if nation == other:
             continue
 
-        # print "\t", other.name, other.score
-
         max_score_can_declare_on = other.score * 1.75
         min_score_can_declare_on = other.score * 0.75
-
-        # print "\t", min_score_can_declare_on, max_score_can_declare_on
 
         covered_min = max(min_score_can_be_declared_by, min_score_can_declare_on)
         covered_max = min(max_score_can_be_declared_by, max_score_can_declare_on)
@@ -55,11 +49,9 @@ for nation in nations_sorted:
         count = 0
 
         if covered_min > min_score_can_be_declared_by:
-            # print "\thole below +1"
             count += 1
             holes_below += (1 - covered_percentage)
         if covered_max < max_score_can_be_declared_by:
-            # print "\thole above +1"
             count += 1
             holes_above += (1 - covered_percentage)
 
@@ -70,6 +62,12 @@ for nation in nations_sorted:
     nation.percent_score_military = 100.0 * nation.military.score / float(nation.score)
     nation.defendability_factor = 100.0 * def_factor
     nation.action_priority = 100.0 * vuln_factor / float(len(nations))
+    print "wtf, here we go"
+    jsonpickle.encode(nation)
+    print "success 1"
+    jsonpickle.encode(nation, unpicklable=False)
+    print "success 2"
+    json.loads(jsonpickle.encode(nation, unpicklable=False))
 
     db_object['nations'].append(json.loads(jsonpickle.encode(nation, unpicklable=False)))
 
