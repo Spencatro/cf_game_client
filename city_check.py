@@ -57,5 +57,5 @@ if len(infos) > 0:
     print "<h1>Nations off cooldown (ready to build)</h1>"
     print matrix_to_table(infos, headers)
 if len(goods) > 0:
-    print "<h1>Nations off cooldown (good job!)</h1>"
+    print "<h1>Nations on cooldown (good job!)</h1>"
     print matrix_to_table(goods, headers)
