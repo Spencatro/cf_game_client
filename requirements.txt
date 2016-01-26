@@ -6,3 +6,4 @@ colour
 pygal
 requests
 plotly
+jsonpickle
