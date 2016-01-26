@@ -136,6 +136,7 @@ def defendability():
 
         vuln_factor = holes_below - holes_above
         obj_out = {'name': nation.name,
+                   'id': nation.nation_id,
                    'score': nation.score,
                    'percent_military_score': 100.0 * nation.military.get_score() / nation.score,
                    'def_factor': 100 * def_factor,
