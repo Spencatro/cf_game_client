@@ -1164,6 +1164,7 @@ class LeanPWDB(object):
         pnw_db.authenticate(mongo_user, mongo_password)
         self._db = pnw_db
         self.market_watch_collection = self._db["market_watch"]
+        self.nation_cache_collection = self._db["nation_cache"]
         self.market_watch_notification_collection = self._db["market_watch_notifications"]
 
     def get_recent_market_records(self, num_records=200):
@@ -1216,6 +1217,9 @@ class LeanPWDB(object):
         n_record[item_type][record_type] = 0
         n_record[item_type][percentage_key] = 0
         self.market_watch_notification_collection.update({"_id": n_id}, n_record)
+
+    def cache_nation_list(self, nation_list):
+        self.nation_cache_collection.insert(nation_list)
 
     def reset_buy_counter(self, item_type):
         self._reset_counter(item_type, "buy")
