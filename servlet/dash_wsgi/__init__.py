@@ -140,7 +140,7 @@ def defendability():
                    'score': nation.score,
                    'percent_military_score': 100.0 * nation.military.get_score() / nation.score,
                    'def_factor': 100 * def_factor,
-                   'action_priority': 100 * vuln_factor}
+                   'action_priority': 100 * vuln_factor / float(len(nations))}
 
         nations_out.append(obj_out)
     avg_def_factor /= float(len(nations))
