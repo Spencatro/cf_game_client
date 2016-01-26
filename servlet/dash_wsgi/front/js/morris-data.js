@@ -1,53 +1,66 @@
-$(function() {
-
-    $.getJSON( "http://dash_api.shawk.in/graph_data/market/days=1/", function( data ) {
-        console.log(data.last);
-
-        $.each(data.types, function(idx, obj){
-            setTimeout(function(){
-
-                var chart = Morris.Line({
-                    element: 'morris-' + obj,
-                    data: data.long_term_averages,
-                    xkey: 'morris_date',
-                    ykeys: [obj+'avg_sell', obj+'sell'],
-                    labels: ['Average', 'Current'],
-                    pointSize:0,
-                    hideHover: 'auto',
-                    resize: true,
-                    ymin: 'auto',
-                    lineColors: ['#1f77b4', '#ff7f0e']
-                });
-
-                if (0 == idx) {
-                    chart.options.labels.forEach(function(label, i) {
-                        var legendItem = $('<span></span>').text(label).css('color', chart.options.lineColors[i]);
-                        $('.legend').append(legendItem);
-                    });
-                }
-
-                var diff = 100 * ((data.last[obj+"sell"] - data.last[obj+"avg_sell"]) / (0.5 * (data.last[obj+"avg_sell"] + data.last[obj+"sell"])));
-                var diff_text;
-                var color;
-                if(diff > 0) {
-                    color = "green";
-                    diff_text = "+" + diff.toFixed(2) + "%";
-                } else {
-                    color = "red";
-                    diff_text = diff.toFixed(2) + "%";
-                }
-                console.log(obj + ": " + data.last[obj+"avg_sell"] + " -- " + data.last[obj+"sell"] +" = "+ diff);
-                var cost_elem = $("#"+obj+"-cost");
-                var percent_elem = $("#"+obj+"-percent");
-                var loading_elem = $("#"+obj+"-loading");
-                cost_elem.html("<span style='color: "+color+"'>$"+data.last[obj+"sell"] + "</span>");
-                cost_elem.hide().show(0);
-                percent_elem.html("<span style='color: "+color+"'>"+diff_text+"</span>");
-                percent_elem.hide().show(0);
-                loading_elem.hide();
-            }, idx*500);
-        });
-});
+//$(function() {
+//
+//    $.getJSON( "http://dash_api.shawk.in/graph_data/market/days=1/", function( data ) {
+//        console.log(data.last);
+//
+//        $.each(data.types, function(idx, obj){
+//            setTimeout(function(){
+//
+//                var chart = Morris.Line({
+//                    element: 'morris-' + obj,
+//                    data: data.long_term_averages,
+//                    xkey: 'morris_date',
+//                    ykeys: [obj+'avg_sell', obj+'sell'],
+//                    labels: ['Average', 'Current'],
+//                    pointSize:0,
+//                    hideHover: 'auto',
+//                    resize: true,
+//                    ymin: 'auto',
+//                    lineColors: ['#1f77b4', '#ff7f0e']
+//                });
+//
+//                if (0 == idx) {
+//                    chart.options.labels.forEach(function(label, i) {
+//                        var legendItem = $('<span></span>').text(label).css('color', chart.options.lineColors[i]);
+//                        $('.legend').append(legendItem);
+//                    });
+//                }
+//
+//                var diff = 100 * ((data.last[obj+"sell"] - data.last[obj+"avg_sell"]) / (0.5 * (data.last[obj+"avg_sell"] + data.last[obj+"sell"])));
+//                var diff_text;
+//                var color;
+//                if(diff > 0) {
+//                    color = "green";
+//                    diff_text = "+" + diff.toFixed(2) + "%";
+//                } else {
+//                    color = "red";
+//                    diff_text = diff.toFixed(2) + "%";
+//                }
+//                console.log(obj + ": " + data.last[obj+"avg_sell"] + " -- " + data.last[obj+"sell"] +" = "+ diff);
+//                var cost_elem = $("#"+obj+"-cost");
+//                var percent_elem = $("#"+obj+"-percent");
+//                var loading_elem = $("#"+obj+"-loading");
+//                cost_elem.html("<span style='color: "+color+"'>$"+data.last[obj+"sell"] + "</span>");
+//                cost_elem.hide().show(0);
+//                percent_elem.html("<span style='color: "+color+"'>"+diff_text+"</span>");
+//                percent_elem.hide().show(0);
+//                loading_elem.hide();
+//            }, idx*500);
+//        });
+//
+//        $.getJSON( "http://dash_api.shawk.in/defendability/", function( data ) {
+//            $("#gauge-loading").hide()
+//            var g1 = new JustGage({
+//              id: "gauge",
+//              value: data.avg_def_factor,
+//              min: 0,
+//              max: 100,
+//              title: "Defendability Score",
+//              label: "",
+//              relativeGaugeSize: true
+//            });
+//        });
+//});
 
     //Morris.Area({
     //    element: 'morris-area-chart',
@@ -110,21 +123,6 @@ $(function() {
     //    resize: true
     //});
 
-    Morris.Donut({
-        element: 'morris-donut-chart',
-        data: [{
-            label: "Download Sales",
-            value: 12
-        }, {
-            label: "In-Store Sales",
-            value: 30
-        }, {
-            label: "Mail-Order Sales",
-            value: 20
-        }],
-        resize: true
-    });
-    
     //Morris.Bar({
     //    element: 'morris-bar-chart',
     //    data: [{
@@ -163,4 +161,4 @@ $(function() {
     //    resize: true
     //});
 
-});
+//});

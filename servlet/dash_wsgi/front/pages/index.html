@@ -58,7 +58,7 @@
                 <div class="sidebar-nav navbar-collapse">
                     <ul class="nav" id="side-menu">
                         <li>
-                            <a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
+                            <a href="index.html" class="active"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
                         </li>
                         <li>
                             <a href="tables.html"><i class="fa fa-bar-chart-o fa-fw"></i> Market Graphs</a>
@@ -67,7 +67,7 @@
                             <a href="forms.html"><i class="fa fa-money fa-fw"></i> Bank Pulse</a>
                         </li>
                         <li>
-                            <a href="forms.html"><i class="fa fa-users fa-fw"></i> Alliance Monitor</a>
+                            <a href="alliance_monitor.html"><i class="fa fa-users fa-fw"></i> Alliance Score Monitor</a>
                         </li>
                         <li>
                             <a href="#"><i class="fa fa-wrench fa-fw"></i> UI Elements<span class="fa arrow"></span></a>
@@ -223,10 +223,11 @@
                     <!-- /.panel -->
                     <div class="panel panel-default">
                         <div class="panel-heading">
-                            <i class="fa fa-bar-chart-o fa-fw"></i> Donut Chart Example
+                            <i class="fa fa-bar-chart-o fa-fw"></i> Average Overall Defendability
                         </div>
                         <div class="panel-body">
-                            <div id="morris-donut-chart"></div>
+                            <img id="gauge-loading" src="../dist/img/spin.svg">
+                            <div id="gauge"></div>
                             <a href="#" class="btn btn-default btn-block">View Details</a>
                         </div>
                         <!-- /.panel-body -->
@@ -394,6 +395,76 @@
 
     <!-- Custom Theme JavaScript -->
     <script src="../dist/js/sb-admin-2.js"></script>
+
+    <!-- Gauge charts -->
+    <script src="../js/raphael-2.1.4.min.js"></script>
+    <script src="../js/justgage.js"></script>
+    <script>
+        $(function() {
+
+            $.getJSON("http://dash_api.shawk.in/defendability/", function (data) {
+                $("#gauge-loading").hide()
+                var g1 = new JustGage({
+                    id: "gauge",
+                    value: data.avg_def_factor,
+                    min: 0,
+                    max: 100,
+                    title: "Defendability Score",
+                    label: "",
+                    relativeGaugeSize: true
+                });
+            });
+
+            $.getJSON("http://dash_api.shawk.in/graph_data/market/days=1/", function (data) {
+                console.log(data.last);
+
+                $.each(data.types, function (idx, obj) {
+                    setTimeout(function () {
+
+                        var chart = Morris.Line({
+                            element: 'morris-' + obj,
+                            data: data.long_term_averages,
+                            xkey: 'morris_date',
+                            ykeys: [obj + 'avg_sell', obj + 'sell'],
+                            labels: ['Average', 'Current'],
+                            pointSize: 0,
+                            hideHover: 'auto',
+                            resize: true,
+                            ymin: 'auto',
+                            lineColors: ['#1f77b4', '#ff7f0e']
+                        });
+
+                        if (0 == idx) {
+                            chart.options.labels.forEach(function (label, i) {
+                                var legendItem = $('<span></span>').text(label).css('color', chart.options.lineColors[i]);
+                                $('.legend').append(legendItem);
+                            });
+                        }
+
+                        var diff = 100 * ((data.last[obj + "sell"] - data.last[obj + "avg_sell"]) / (0.5 * (data.last[obj + "avg_sell"] + data.last[obj + "sell"])));
+                        var diff_text;
+                        var color;
+                        if (diff > 0) {
+                            color = "green";
+                            diff_text = "+" + diff.toFixed(2) + "%";
+                        } else {
+                            color = "red";
+                            diff_text = diff.toFixed(2) + "%";
+                        }
+                        console.log(obj + ": " + data.last[obj + "avg_sell"] + " -- " + data.last[obj + "sell"] + " = " + diff);
+                        var cost_elem = $("#" + obj + "-cost");
+                        var percent_elem = $("#" + obj + "-percent");
+                        var loading_elem = $("#" + obj + "-loading");
+                        cost_elem.html("<span style='color: " + color + "'>$" + data.last[obj + "sell"] + "</span>");
+                        cost_elem.hide().show(0);
+                        percent_elem.html("<span style='color: " + color + "'>" + diff_text + "</span>");
+                        percent_elem.hide().show(0);
+                        loading_elem.hide();
+                    }, idx * 500);
+                });
+            });
+        });
+    </script>
 
 </body>
 
