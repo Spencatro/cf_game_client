@@ -143,6 +143,7 @@ def defendability():
 
         nations_out.append(obj_out)
     avg_def_factor /= float(len(nations))
+    avg_def_factor *= 100
     return jsonify({"list": nations_out, "avg_def_factor": avg_def_factor})
 
 
