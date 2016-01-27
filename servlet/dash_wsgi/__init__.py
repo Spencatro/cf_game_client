@@ -81,9 +81,11 @@ def defendability():
     latest_list = pwdb.get_latest_nation_cache_list()
     nations_out = []
     avg_def_factor = 0
+    avg_mil_percent = 0
     for nation in latest_list["nations"]:
         def_factor = nation["defendability_factor"]
         avg_def_factor += def_factor
+        avg_mil_percent += nation["percent_score_military"]
 
         action_priority = nation["action_priority"]
 
@@ -102,7 +104,9 @@ def defendability():
 
         nations_out.append(obj_out)
     avg_def_factor /= float(len(latest_list["nations"]))
-    return jsonify({"list": nations_out, "avg_def_factor": avg_def_factor})
+    avg_mil_percent /= float(len(latest_list["nations"]))
+    return jsonify({"list": nations_out, "avg_def_factor": avg_def_factor,
+                    "avg_mil_percent": avg_mil_percent})
 
 
 @app.route('/dashboard_beta/')
