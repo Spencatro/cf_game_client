@@ -90,6 +90,7 @@ def defendability():
         obj_out = {'name': nation["name"],
                    'id': nation["nation_id"],
                    'score': nation["score"],
+                   'num_cities': len(nation['cities']),
                    'percent_military_score': nation["percent_score_military"],
                    'def_factor': def_factor,
                    'action_priority': action_priority}
