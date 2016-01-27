@@ -1,5 +1,5 @@
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime
 from functools import update_wrapper
 from flask import Flask, jsonify, request, make_response
 from flask.templating import render_template
@@ -87,10 +87,15 @@ def defendability():
 
         action_priority = nation["action_priority"]
 
+        most_recent_city_founded_string = nation['cities'][-1]['founded']
+        most_recet_datetime = datetime.strptime(most_recent_city_founded_string, "%Y-%m-%d %H:%M:%S")
+        now = datetime.now()
+        days_since_built = (now - most_recet_datetime).days
         obj_out = {'name': nation["name"],
                    'id': nation["nation_id"],
                    'score': nation["score"],
                    'num_cities': len(nation['cities']),
+                   'days_since_last_built': days_since_built,
                    'percent_military_score': nation["percent_score_military"],
                    'def_factor': def_factor,
                    'action_priority': action_priority}
