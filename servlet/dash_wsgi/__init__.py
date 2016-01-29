@@ -109,7 +109,7 @@ def defendability():
                     "avg_mil_percent": avg_mil_percent})
 
 
-@app.route('/resource_pules/')
+@app.route('/resource_pulse/')
 @crossdomain(app=app, origin='*', methods=["GET"])
 def rsc_pulse():
     USERNAME = os.environ['PW_USER']
@@ -121,7 +121,6 @@ def rsc_pulse():
     for nation in latest_list["nations"]:
         complex = nation["simple_net_income"]
         for item_type in realstring_dict.keys():
-            print item_type
             item_value = realstring_dict[item_type]
             trade_url = "https://politicsandwar.com/index.php?id=90&display=world&resource1="+item_value+"&buysell=buy&ob=price&od=DESC&maximum=15&minimum=0&search=Go"
             nationtable = pwc._retrieve_nationtable(trade_url, 0)
@@ -129,10 +128,7 @@ def rsc_pulse():
             trade_td = trade_tr.findall(".//td")[5]
             trade_text = trade_td[0].text
             trade_num = int(trade_text.split("/")[0].replace(",",""))
-            print "-value of",item_type,"at",trade_num
-            print "-nation produces",nation.net_resource_production[item_value]
-            change = trade_num * nation.net_resource_production[item_value]
-            print "-modifying complex: ", change
+            change = trade_num * nation["net_resource_production"][item_value]
             complex += change
         nation["complex_net_income"] = complex
         score_without_mil = nation["score"] - nation["military"]["score"]
