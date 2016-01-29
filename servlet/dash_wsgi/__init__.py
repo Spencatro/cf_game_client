@@ -109,6 +109,42 @@ def defendability():
                     "avg_mil_percent": avg_mil_percent})
 
 
+@app.route('/resource_pules/')
+@crossdomain(app=app, origin='*', methods=["GET"])
+def rsc_pulse():
+    USERNAME = os.environ['PW_USER']
+    PASS = os.environ['PW_PASS']
+    pwc = PWClient(USERNAME, PASS)
+    pwdb = LeanPWDB()
+    latest_list = pwdb.get_latest_nation_cache_list()
+    nations_out = []
+    for nation in latest_list:
+        complex = nation["simple_net_income"]
+        for item_type in realstring_dict.keys():
+            print item_type
+            item_value = realstring_dict[item_type]
+            trade_url = "https://politicsandwar.com/index.php?id=90&display=world&resource1="+item_value+"&buysell=buy&ob=price&od=DESC&maximum=15&minimum=0&search=Go"
+            nationtable = pwc._retrieve_nationtable(trade_url, 0)
+            trade_tr = nationtable.findall(".//tr")[1]
+            trade_td = trade_tr.findall(".//td")[5]
+            trade_text = trade_td[0].text
+            trade_num = int(trade_text.split("/")[0].replace(",",""))
+            print "-value of",item_type,"at",trade_num
+            print "-nation produces",nation.net_resource_production[item_value]
+            change = trade_num * nation.net_resource_production[item_value]
+            print "-modifying complex: ", change
+            complex += change
+        nation["complex_net_income"] = complex
+        score_without_mil = nation["score"] - nation["military"]["score"]
+        obj_out = {'name': nation["name"],
+                   'id': nation["nation_id"],
+                   'score': nation["score"],
+                   'score_without_military': score_without_mil,
+                   'rev_factor': nation["complex_net_income"] / float(score_without_mil)}
+        nations_out.append(obj_out)
+    return jsonify({"list": nations_out})
+
+
 @app.route('/dashboard_beta/')
 def dashboard_beta():
     return render_template('pages/index.html')
