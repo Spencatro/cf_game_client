@@ -118,7 +118,7 @@ def rsc_pulse():
     pwdb = LeanPWDB()
     latest_list = pwdb.get_latest_nation_cache_list()
     nations_out = []
-    for nation in latest_list:
+    for nation in latest_list["nations"]:
         complex = nation["simple_net_income"]
         for item_type in realstring_dict.keys():
             print item_type
