@@ -1,4 +1,7 @@
+import json
+import pprint
 import traceback
+import urllib
 from urllib import urlencode, quote_plus, quote
 import datetime
 from datetime import timedelta
@@ -22,6 +25,8 @@ DEBUG_LEVEL_STFU = 0
 
 BEIGE_CREATION_TIMEDELTA = timedelta(days=14, hours=2)
 BEIGE_WAR_TIMEDELTA = timedelta(days=5, hours=2)
+
+MAGIC_POPULATION_INCOME = 0.7468  # dude... just don't fucking ask ok
 
 def stringify_children(node):
     from lxml.etree import tostring
@@ -115,6 +120,7 @@ class Battle:
         self.immense_triumph = immense_triumph
         self.ended_war = ended_war
         self.is_declaration = battle_type == Battle.BATTLE_DECLARATION
+
 
 class War:
     def __init__(self, war_id, battles = None):
@@ -217,14 +223,19 @@ class Nation:
     nation_id = None
     time_since_active = None
     precisely_founded = False
+    gross_income = 0
+    simple_net_income = 0
+    improvement_spending = 0
     cities = []
 
     warrable_list = []
+
 
 class PWClient:
 
     __last_request_timestamp = 0
     __root_url = "https://politicsandwar.com"
+    __root_api_url = "https://politicsandwar.com/api/"
     __username = None
     __password = None
 
@@ -234,8 +245,8 @@ class PWClient:
     def __init__(self, username, password, logger=None):
         self.debug = DEBUG_LEVEL_STFU
         self.http = httplib2.Http()
-        self.headers = { 'Accept': 'text/html',
-                         'user-agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36' }
+        self.headers = {'Accept': 'text/html',
+                        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36' }
         self.__username = username
         self.__password = password
         self.__using_db = False
@@ -574,7 +585,7 @@ class PWClient:
         dt = datetime.datetime.strptime(datestring+" "+str(now_year), "%B %d %I:%M %p %Y")
         return dt
 
-    def get_nation_obj_from_ID(self,nation_id, skip_cache = False):
+    def get_nation_obj_from_ID(self, nation_id, skip_cache = False):
         """
         returns a nation object from a nations ID. If skip_cache = True, this will pull the webpage even if it is cached
 
@@ -596,174 +607,193 @@ class PWClient:
                 return self.nation_cache[nation_id]
 
         # Not in cache, go pull data
-        url = self.__root_url + "/nation/id="+nation_id
-        nationtable = self._retrieve_nationtable(url)
-
+        api_url = self.__root_api_url + "/nation/id="+nation_id
         nation = Nation()
         military = Military()
         cities = []
 
-        second_nationtable = self._retrieve_nationtable(url, 1)
-        for city in second_nationtable.findall(".//tr/td/a"):
+        reponse, content = self.__make_http_request(api_url)
+        nation_json = json.loads(content)["nationdata"]
 
-            city_obj = City()
-            city_obj.name = city.text
-            city_link = city.attrib["href"]
-            city_table = self._retrieve_nationtable(city_link)
+        for city_id in nation_json["cityids"]:
+            url = self.__root_api_url + "city/id=" + str(city_id)
+            response, content = self.__make_http_request(url)
+            json_data = json.loads(content)
+            cities.append(json_data)
 
-            infrastructure = float(city_table[1][0][1].text.replace(",",""))
-            city_obj.infrastructure = infrastructure
-            land_area = city_table[1][1][0][1].text.split(" ")[0].replace(",","")
-            city_obj.land_area = land_area
-            population = int(city_table[1][0][3].text.split(" ")[0].replace(",",""))
-            city_obj.population = population
-
-            # print city_table[1][1][0][2][1].tag
-            # print city_table[1][1][0][2][1].text
-            date_string = city_table[1][1][0][3][1][0][3][3][1].text
-            day_founded = datetime.datetime.strptime(date_string, "%m/%d/%Y")
-            city_obj.founded = day_founded
-
-            cities.append(city_obj)
         nation.cities = cities
         nation.nation_id = nation_id
 
-        for tr in nationtable.findall(".//tr"):
-            self._print(3,">tr", len(tr))
-            td_key_text = str(tr[0].text).strip()
-            td_key_tag = str(tr[0].tag).strip()
-            if td_key_text == "Nation Name:":
-                nation.name = tr[1].text
-                self._print(3,"FOUND: Nation name:",tr[1].text)
-            elif td_key_text == "Leader Name:":
-                nation.leader = tr[1].text
-                self._print(3,"FOUND: Leader name:",tr[1].text)
-            elif td_key_text == "Founded:":
-                date_string = tr[1].text.split(" ")[0]
-                date_obj = datetime.datetime.strptime(date_string, "%m/%d/%Y")
-                nation.founded_date = date_obj
-                self._print(3,"FOUND: Founded:",date_obj)
-            elif td_key_text == "Last Activity:":
-                activity_text = tr[1].text
-                # TODO: transform this into a datetime
-                nation.time_since_active = activity_text
-                self._print(3,"FOUND: Last active:",tr[1].text)
-            elif td_key_text == "Unique ID:":
-                uid = tr[1].text
-                nation.uid = tr[1][0].text
-                self._print(3,tr[1][0].attrib['href'])
-                self._print(3,"FOUND: UID:", tr[1][0].text)
-            elif td_key_text == "National Color:":
-                self._print(3,"FOUND COLOR:", tr[1][0][0].text)
-                nation.color = tr[1][0][0].text.strip()
-            elif td_key_text == "Alliance:":
-                if len(tr[1]) > 0:
-                    nation.alliance_name = tr[1][0].text
-                    href = str(tr[1][0].attrib['href'])
-                    idx = href.index('=')
-                    a_id = href[idx+1:len(href)]
-                    nation.alliance_id = int(a_id)
-                    self._print(3,"Found A_ID:", href, a_id)
-                else:
-                    self._print(3,"No a_id")
-                    nation.alliance_id = None
-            elif td_key_text == "Government Type:":
-                # ....don't ask, something is up with the parser
-                # Edit: Okay it looks like any td with a question mark needs to be indexed weird
-                # Normally it's tr[1], but for '?' td's, it's tr[0][1]. I don't know why.
-                # Parser is probably mad at bad HTML.
-                self._print(3,"Found Govt type:", tr[0][1].text)
-                nation.govt_type = str(tr[0][1].text).strip()
-            elif td_key_text == "Population:":
-                population = str(tr[1].text.replace(',','')).strip()
-                self._print(3,"Found pop:",population)
-                nation.population = int(population) # get rid of commas
-            elif td_key_text == "Land Area:":
-                land = str(tr[0][1].text.replace(',','')).strip()
-                idx = land.index("sq")-1
-                land = land[:idx]
-                self._print(3,"Found land area:", land)
-                nation.land_area = int(land) # get rid of commas
-            elif td_key_text == "Infrastructure:":
-                inf = float(tr[0][1].text.replace(',',''))
-                self._print(3,"Found infra:",inf)
-                nation.infrastructure = inf
-            elif td_key_text == "Pollution Index:":
-                pollution_string = str(tr[0][1].text).strip()
-                idx = pollution_string.index(" ")
-                pollution = int(pollution_string[:idx].replace(',',''))
-                self._print(3,"Found pollution:",pollution)
-                nation.pollution_index = pollution
-            elif td_key_text == "Nation Rank:":
-                idx = tr[1].text.index(" of")
-                rank = tr[1].text[1:idx].replace(',','')
-                nation.rank = int(rank)
-                self._print(3,"Found nation rank:", tr[1].text, rank)
-            elif td_key_text == "Nation Score:":
-                self._print(3,"Found nation score:",tr[1].text)
-                score = float(tr[1].text.replace(",",""))
-                nation.score = score
+        nation.name = nation_json["name"]
+        nation.leader = nation_json["leadername"]
+        founded_dt_string = nation_json["founded"]
+        nation.founded_date = datetime.datetime.strptime(founded_dt_string, "%Y-%m-%d %H:%M:%S")
+        now = datetime.datetime.now()
+        time_delta = datetime.timedelta(minutes=nation_json["minutessinceactive"])
+        nation.time_since_active = now - time_delta
+        nation.uid = nation_json["uniqueid"]
+        nation.color = nation_json["color"]
+        nation.alliance_id = nation_json["allianceid"]
+        nation.alliance_name = nation_json["alliance"]
+        nation.govt_type = nation_json["government"]
+        nation.population = nation_json["population"]
+        nation.land_area = nation_json["landarea"]
+        nation.infrastructure = nation_json["totalinfrastructure"]
+        nation.rank = nation_json["nationrank"]
+        nation.score = nation_json["score"]
 
-            elif td_key_text == "Soldiers:":
-                soldiers = tr[1].text.replace(',','')
-                military.soldiers = int(soldiers)
-                self._print(3,"Found soldiers:",military.soldiers)
+        military.soldiers = nation_json["soldiers"]
+        military.tanks = nation_json["tanks"]
+        military.aircraft = nation_json["aircraft"]
+        military.ships = nation_json["ships"]
+        military.missiles = nation_json["missiles"]
+        military.nukes = nation_json["nukes"]
 
-            elif td_key_text == "Tanks:":
-                tanks = tr[1].text.replace(',','')
-                military.tanks = int(tanks)
-                self._print(3,"Found tanks:",military.tanks)
+        # calculate gross income
+        total_gross_daily_income = 0
+        total_improvement_spending = 0
 
-            elif td_key_text == "Aircraft:":
-                aircraft = tr[1].text.replace(',','')
-                military.aircraft = int(aircraft)
-                self._print(3,"Found aircraft:",military.aircraft)
+        net_resources = {
+            "oil": 0,
+            "coal": 0,
+            "iron": 0,
+            "bauxite": 0,
+            "lead": 0,
+            "food": 0,
+            "uranium": 0,
+            "gasoline": 0,
+            "steel": 0,
+            "aluminum": 0,
+            "munitions": 0
+        }
+        power = 0
+        rsc = 0
+        ironworks = int(nation_json["ironworks"])
+        armsstockpile = int(nation_json["armsstockpile"])
+        bauxiteworks = int(nation_json["bauxiteworks"])
+        emgasreserve = int(nation_json["emgasreserve"])
+        massirrigation = int(nation_json["massirrigation"])
+        unpowered_cities = []
 
-            elif td_key_text == "Ships:":
-                ships = tr[1].text.replace(',','')
-                military.ships = int(ships)
-                self._print(3,"Found ships:",military.ships)
+        for city in nation.cities:
+            total_gross_daily_income += city["population"] *\
+                                        MAGIC_POPULATION_INCOME * (1 + (2 * city["commerce"] / 100.0))
+            commerce_cost = int(city['supermarket']) * 600 + \
+                            int(city['bank']) * 1800 + \
+                            int(city['shoppingmall']) * 5400 + \
+                            int(city['stadium']) * 12150
 
-            elif td_key_text == "Spies:":
-                spies = tr[1].text.replace(',','')
-                military.spies = int(spies)
-                self._print(3,"Found spies:",military.spies)
+            civil_cost = int(city['policestation']) * 750 + \
+                         int(city['hospital']) * 1000 + \
+                         int(city['recyclingcenter']) * 2500 + \
+                         int(city['subway']) * 3250
 
-            elif td_key_text == "Missiles:":
-                missiles = tr[1].text.replace(',','')
-                military.missiles = int(missiles)
-                self._print(3,"Found missiles:",military.missiles)
+            rsc_cost = int(city['oilwell']) * 600 + \
+                       int(city['coalmine']) * 400 + \
+                       int(city['ironmine']) * 1600 + \
+                       int(city['uraniummine']) * 5000 + \
+                       int(city['bauxitemine']) * 1600 + \
+                       int(city['leadmine']) * 1500 + \
+                       int(city['farm']) * 300
 
-            elif td_key_text == "Nuclear Weapons:":
-                nukes = tr[1].text.replace(',','')
-                military.nukes = int(nukes)
-                self._print(3,"Found nukes:",military.nukes)
+            food = float(city["land"]) * int(city["farm"]) / 300.0 * 12 * 1.2
+            if massirrigation:
+                food = float(city["land"]) * int(city["farm"]) / 250.0 * 12 * 1.2
+            net_resources["food"] += food
 
-            # TODO: scrape projects
-            else:
-                found_something = False
-                try:
-                    for obj in tr[0][0]:
-                        if "was created!" in obj.tail:
-                            now_year = datetime.datetime.now().year
-                            creation_string = tr[0][0].text[:-3]+" "+str(now_year)
-                            format_string = "%m/%d %I:%M %p %Y"
-                            created_obj = datetime.datetime.strptime(creation_string, format_string)
-                            if datetime.datetime.now() < created_obj:
-                                #This is in the future, oops, fix it I guess (this is bad but w/e)
-                                creation_string = tr[0][0].text[:-3]+" "+str(nation.founded_date.year)
-                                format_string = "%m/%d %I:%M %p %Y"
-                                created_obj = datetime.datetime.strptime(creation_string, format_string)
-                            found_something = True
-                            if created_obj > nation.founded_date:
-                                nation.founded_date = created_obj
-                                nation.precisely_founded = True
-                                self._print(3, "Found more precise founded date:",created_obj)
-                except:
-                    pass
-                finally:
-                    if not found_something:
-                        self._print(3, "Unknown key:",td_key_tag, td_key_text)
+            net_resources["oil"] += 9 * int(city['oilwell'])
+            net_resources["iron"] += 6 * int(city['ironmine'])
+            net_resources["bauxite"] += 6 * int(city['bauxitemine'])
+            net_resources["coal"] += 6 * int(city['coalmine'])
+            net_resources["lead"] += 9 * int(city['leadmine'])
+            net_resources["uranium"] += 3 * int(city['uraniummine'])
+
+            mfg_cost = int(city['oilrefinery']) * 4000 + \
+                       int(city['steelmill']) * 4000 + \
+                       int(city['aluminumrefinery']) * 2500 + \
+                       int(city['munitionsfactory']) * 3500
+
+            oil_spent = 3 * int(city['oilrefinery'])
+            gas = 6 * int(city['oilrefinery'])
+            if emgasreserve:
+                oil_spent *= 2
+                gas *= 2
+            net_resources["oil"] -= oil_spent
+            net_resources["gasoline"] += gas
+
+            iron_spent = 3 * int(city['steelmill'])
+            coal_spent = 3 * int(city['steelmill'])
+            steel = 9 * int(city['steelmill'])
+            if ironworks:
+                iron_spent *= 1.36
+                coal_spent *= 1.36
+                steel *= 1.36
+            net_resources["iron"] -= iron_spent
+            net_resources["coal"] -= coal_spent
+            net_resources["steel"] += steel
+
+            bauxite_spent = 3 * int(city['aluminumrefinery'])
+            alum = 9 * int(city['aluminumrefinery'])
+            if bauxiteworks:
+                bauxite_spent *= 1.36
+                alum *= 1.36
+            net_resources["bauxite"] -= bauxite_spent
+            net_resources["aluminum"] += alum
+
+            lead_spent = 6 * int(city['munitionsfactory'])
+            munitions = 18 * int(city['munitionsfactory'])
+            if armsstockpile:
+                lead_spent *= 1.34
+                munitions *= 1.34
+            net_resources["lead"] -= lead_spent
+            net_resources["munitions"] += munitions
+
+            pwr_cost = int(city['coalpower']) * 1200 + \
+                       int(city['oilpower']) * 1800 + \
+                       int(city['nuclearpower']) * 10500 + \
+                       int(city['windpower']) * 500
+            all_infra = float(city["infrastructure"])
+
+            nuclear_plants = int(city['nuclearpower'])
+            while nuclear_plants:
+                num_used_nuclearpower = min(all_infra, 2000)
+                all_infra -= num_used_nuclearpower
+                net_resources["uranium"] -= 1.2 * 2
+                nuclear_plants -= 1
+
+            coal_plants = int(city['coalpower'])
+            while coal_plants:
+                num_used_coalpower = min(all_infra, 500)
+                all_infra -= num_used_coalpower
+                net_resources["coal"] -= 1.2 * 5
+                coal_plants -= 1
+
+            oil_plants = int(city['oilpower'])
+            while oil_plants:
+                num_used_oilpower = min(all_infra, 500)
+                all_infra -= num_used_oilpower
+                net_resources["oil"] -= 1.2 * 5
+                oil_plants -= 1
+
+            if all_infra > 0:
+                print "WARNING: city",city["name"], "is unpowered!"
+                unpowered_cities.append(int(city["cityid"]))
+
+            power += pwr_cost
+            rsc += mfg_cost + rsc_cost
+            total_improvement_spending += commerce_cost + civil_cost + mfg_cost + rsc_cost + pwr_cost
+
+        for key in net_resources.keys():
+            net_resources[key] = round(net_resources[key], 2)
+
+        nation.gross_income = total_gross_daily_income
+        nation.improvement_spending = total_improvement_spending
+        nation.net_resource_production = net_resources
+        nation.unpowered_cities = unpowered_cities
+        nation.simple_net_income = total_gross_daily_income - total_improvement_spending
+
+        nation.raw_json = nation_json
+
         nation.military = military
         self.nation_cache[nation_id] = nation
         return nation
