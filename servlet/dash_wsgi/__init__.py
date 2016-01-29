@@ -90,7 +90,7 @@ def defendability():
         action_priority = nation["action_priority"]
 
         most_recent_city_founded_string = nation['cities'][-1]['founded']
-        most_recet_datetime = datetime.strptime(most_recent_city_founded_string, "%Y-%m-%d %H:%M:%S")
+        most_recet_datetime = datetime.strptime(most_recent_city_founded_string, "%Y-%m-%d")
         now = datetime.now()
         days_since_built = (now - most_recet_datetime).days
         obj_out = {'name': nation["name"],
