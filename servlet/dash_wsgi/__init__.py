@@ -131,19 +131,19 @@ def rsc_pulse():
     latest_list = pwdb.get_latest_nation_cache_list()
     nations_out = []
     for nation in latest_list["nations"]:
-        complex = nation["simple_net_income"]
+        resource_only = 0
         for item_type in realstring_dict.keys():
             item_value = realstring_dict[item_type]
             trade_num = trade_nums[item_type]
-            change = trade_num * nation["net_resource_production"][item_value]
-            complex += change
-        nation["complex_net_income"] = complex
-        score_without_mil = nation["score"] - nation["military"]["score"]
+            change = trade_num * nation["net_resource_production_ignore_power"][item_value]
+            resource_only += change
+        nation["resource_only_income"] = resource_only
+        nation["resource_only_income"] -= nation["total_resource_spending"]
         obj_out = {'name': nation["name"],
                    'id': nation["nation_id"],
                    'score': nation["score"],
-                   'score_without_military': score_without_mil,
-                   'rev_factor': nation["complex_net_income"] / float(score_without_mil)}
+                   'num_resource_improvements': nation["num_resource_improvements"],
+                   'rev_factor': nation["resource_only_income"] / nation["num_resource_improvements"]}
         nations_out.append(obj_out)
     return jsonify({"list": nations_out})
 
