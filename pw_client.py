@@ -652,6 +652,7 @@ class PWClient:
         # calculate gross income
         total_gross_daily_income = 0
         total_improvement_spending = 0
+        total_resource_improvement_spending = 0
 
         net_resources = {
             "oil": 0,
@@ -666,14 +667,17 @@ class PWClient:
             "aluminum": 0,
             "munitions": 0
         }
-        power = 0
-        rsc = 0
+
+        net_resources_power_only = dict(net_resources)
+
         ironworks = int(nation_json["ironworks"])
         armsstockpile = int(nation_json["armsstockpile"])
         bauxiteworks = int(nation_json["bauxiteworks"])
         emgasreserve = int(nation_json["emgasreserve"])
         massirrigation = int(nation_json["massirrigation"])
         unpowered_cities = []
+
+        num_resource_improvements = 0
 
         for city in nation.cities:
             total_gross_daily_income += city["population"] *\
@@ -696,6 +700,10 @@ class PWClient:
                        int(city['leadmine']) * 1500 + \
                        int(city['farm']) * 300
 
+            num_resource_improvements += int(city['oilwell']) + int(city['coalmine']) + int(city['ironmine']) \
+                                       + int(city['uraniummine']) + int(city['bauxitemine']) + int(city['leadmine']) \
+                                       + int(city['farm'])
+
             food = float(city["land"]) * int(city["farm"]) / 300.0 * 12 * 1.2
             if massirrigation:
                 food = float(city["land"]) * int(city["farm"]) / 250.0 * 12 * 1.2
@@ -712,6 +720,9 @@ class PWClient:
                        int(city['steelmill']) * 4000 + \
                        int(city['aluminumrefinery']) * 2500 + \
                        int(city['munitionsfactory']) * 3500
+
+            num_resource_improvements += int(city['oilrefinery']) + int(city['steelmill']) \
+                                       + int(city['aluminumrefinery']) + int(city['munitionsfactory'])
 
             oil_spent = 3 * int(city['oilrefinery'])
             gas = 6 * int(city['oilrefinery'])
@@ -759,6 +770,7 @@ class PWClient:
                 num_used_nuclearpower = min(all_infra, 2000)
                 all_infra -= num_used_nuclearpower
                 net_resources["uranium"] -= 1.2 * 2
+                net_resources_power_only["uranium"] -= 1.2 * 2
                 nuclear_plants -= 1
 
             coal_plants = int(city['coalpower'])
@@ -766,6 +778,7 @@ class PWClient:
                 num_used_coalpower = min(all_infra, 500)
                 all_infra -= num_used_coalpower
                 net_resources["coal"] -= 1.2 * 5
+                net_resources_power_only["coal"] -= 1.2 * 2
                 coal_plants -= 1
 
             oil_plants = int(city['oilpower'])
@@ -773,22 +786,30 @@ class PWClient:
                 num_used_oilpower = min(all_infra, 500)
                 all_infra -= num_used_oilpower
                 net_resources["oil"] -= 1.2 * 5
+                net_resources_power_only["oil"] -= 1.2 * 5
                 oil_plants -= 1
 
             if all_infra > 0:
                 print "WARNING: city",city["name"], "is unpowered!"
                 unpowered_cities.append(int(city["cityid"]))
 
-            power += pwr_cost
-            rsc += mfg_cost + rsc_cost
             total_improvement_spending += commerce_cost + civil_cost + mfg_cost + rsc_cost + pwr_cost
+            total_resource_improvement_spending += mfg_cost + rsc_cost
 
         for key in net_resources.keys():
             net_resources[key] = round(net_resources[key], 2)
 
+        net_resources_ignore_power = dict(net_resources)
+        for key in net_resources_power_only.keys():
+            net_resources_power_only[key] = round(net_resources_power_only[key], 2)
+            net_resources_ignore_power[key] -= net_resources_power_only[key]
+
         nation.gross_income = total_gross_daily_income
         nation.improvement_spending = total_improvement_spending
         nation.net_resource_production = net_resources
+        nation.net_resource_production_ignore_power = net_resources_ignore_power
+        nation.num_resource_improvements = num_resource_improvements
+        nation.total_resource_spending = total_resource_improvement_spending
         nation.unpowered_cities = unpowered_cities
         nation.simple_net_income = total_gross_daily_income - total_improvement_spending
 
