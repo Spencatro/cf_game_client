@@ -9,6 +9,12 @@ from market import get_long_short_term_averages, realstring_dict
 from pw_client import LeanPWDB
 from pw_client import PWClient
 
+os.environ["mongodb_url"] = 'ds041404.mongolab.com'
+os.environ['mongodb_port']= '41404'
+os.environ['mongodb_dbname']= 'cfpnw'
+os.environ['mongodb_user']= 'pnw_user'
+os.environ['mongodb_password']= 'extracheesetext'
+
 __author__ = 'shawkins'
 
 app = Flask(__name__)
