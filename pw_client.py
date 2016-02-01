@@ -679,13 +679,19 @@ class PWClient:
 
         num_resource_improvements = 0
 
+        commerce_only_income = 0
+
         for city in nation.cities:
             total_gross_daily_income += city["population"] *\
                                         MAGIC_POPULATION_INCOME * (1 + (2 * city["commerce"] / 100.0))
+            commerce_only_income += city["population"] *\
+                                        MAGIC_POPULATION_INCOME * (2 * city["commerce"] / 100.0)
+
             commerce_cost = int(city['supermarket']) * 600 + \
                             int(city['bank']) * 1800 + \
                             int(city['shoppingmall']) * 5400 + \
                             int(city['stadium']) * 12150
+            commerce_only_income -= commerce_cost
 
             civil_cost = int(city['policestation']) * 750 + \
                          int(city['hospital']) * 1000 + \
@@ -811,6 +817,7 @@ class PWClient:
         nation.num_resource_improvements = num_resource_improvements
         nation.total_resource_spending = total_resource_improvement_spending
         nation.unpowered_cities = unpowered_cities
+        nation.commerce_only_income = commerce_only_income
         nation.simple_net_income = total_gross_daily_income - total_improvement_spending
 
         nation.raw_json = nation_json
