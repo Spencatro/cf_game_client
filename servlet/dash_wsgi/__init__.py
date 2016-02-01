@@ -1,4 +1,6 @@
 import os
+import locale
+locale.setlocale( locale.LC_ALL, 'en_CA.UTF-8' )
 from datetime import timedelta, datetime
 from functools import update_wrapper
 from flask import Flask, jsonify, request, make_response
@@ -144,9 +146,9 @@ def rsc_pulse():
                    'id': nation["nation_id"],
                    'score': nation["score"],
                    'num_resource_improvements': nation["num_resource_improvements"],
-                   'resource_only_income': round(nation["resource_only_income"], 2),
-                   'commerce_only_income': round(nation["commerce_only_income"], 2),
-                   'all_income': round(nation["resource_only_income"] + nation["simple_net_income"] + nation["total_resource_spending"], 2),
+                   'resource_only_income': locale.currency(round(nation["resource_only_income"], 2), grouping=True),
+                   'commerce_only_income': locale.currency(round(nation["commerce_only_income"], 2), grouping=True),
+                   'all_income': locale.currency(round(nation["resource_only_income"] + nation["simple_net_income"] + nation["total_resource_spending"], 2), grouping=True),
                    'rev_factor': round(nation["resource_only_income"] / nation["num_resource_improvements"], 2)}
         nations_out.append(obj_out)
     return jsonify({"list": nations_out})
