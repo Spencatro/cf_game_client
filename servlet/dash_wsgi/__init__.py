@@ -74,6 +74,7 @@ def market_data(days):
     return jsonify({"long_term_averages": long_term_averages, "short_term_averages": short_term_averages,
                     "last": last_record, "types": types})
 
+
 @app.route('/defendability/')
 @crossdomain(app=app, origin='*', methods=["GET"])
 def defendability():
@@ -114,7 +115,7 @@ def defendability():
 def rsc_pulse():
     USERNAME = os.environ['PW_USER']
     PASS = os.environ['PW_PASS']
-    
+
     pwc = PWClient(USERNAME, PASS)
     trade_nums = {}
     for item_type in realstring_dict.keys():
@@ -143,7 +144,10 @@ def rsc_pulse():
                    'id': nation["nation_id"],
                    'score': nation["score"],
                    'num_resource_improvements': nation["num_resource_improvements"],
-                   'rev_factor': nation["resource_only_income"] / nation["num_resource_improvements"]}
+                   'resource_only_income': round(nation["resource_only_income"], 2),
+                   'commerce_only_income': round(nation["commerce_only_income"], 2),
+                   'all_income': round(nation["resource_only_income"] + nation["simple_net_income"] + nation["total_resource_spending"], 2),
+                   'rev_factor': round(nation["resource_only_income"] / nation["num_resource_improvements"], 2)}
         nations_out.append(obj_out)
     return jsonify({"list": nations_out})
 
